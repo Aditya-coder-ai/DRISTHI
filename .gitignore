@@ -1,0 +1,35 @@
+# Virtual environment
+.venv/
+venv/
+ENV/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Cowrie runtime data & logs
+var/
+services/ssh/var/
+services/ssh/log/
+services/ssh/download/
+services/ssh/tty/
+*.log
+*.pid
+
+# Environment variables and secrets
+.env
+!.env.example
+
+# Database files
+*.sqlite
+*.sqlite3
+*.db
+
+# OS files
+.DS_Store
+Thumbs.db

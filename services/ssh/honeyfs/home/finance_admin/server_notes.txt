@@ -1,0 +1,25 @@
+# =====================================================================
+# INTERNAL INFRASTRUCTURE MIGRATION CHECKLIST - CONFIDENTIAL
+# =====================================================================
+Host: finance-server.corp.internal (10.0.1.15)
+Environment: Production (Finance & Payroll Node)
+
+Core Connected Services:
+1. Web Administration Portal:
+   URL: http://10.0.1.20:8080/admin
+   Admin Account: admin / (Contact Security Team for rotate)
+
+2. Offsite Backup FTP Server:
+   Host: 10.0.1.30:2121
+   Service User: backup_user / Backup@2026
+   Directory: /backups/finance/
+
+3. Primary Analytics Database:
+   Host: 10.0.1.25:5432
+   Database: corp_finance_db
+   Root User: database_root / DBroot@2026
+
+Security Reminders:
+- Do NOT commit credentials or cleartext passwords to git.
+- Audit all SSH logins against SIEM logs.
+- Rotate service tokens every 90 days.

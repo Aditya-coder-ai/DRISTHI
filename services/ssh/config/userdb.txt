@@ -1,0 +1,27 @@
+# =====================================================================
+# Cowrie User Database Configuration
+# Format: <username>:<unused>:<password>
+# '*' allows any password; '!' prefixes rejected passwords
+# =====================================================================
+
+# Bait Credential (matches Phase 5 decoy credential list)
+finance_admin:x:Finance@2026
+
+# Internal service accounts
+backup_user:x:Backup@2026
+sysadmin:x:Admin@Corp2026
+jdoe:x:Welcome123!
+
+# Decoy root account with specific password; explicitly deny common dictionary attacks
+root:x:!root
+root:x:!123456
+root:x:!password
+root:x:!admin
+root:x:Root@2026!
+
+# Reject generic attacker attempts explicitly
+admin:x:!admin
+admin:x:!123456
+admin:x:!password
+test:x:!test
+guest:x:!guest
