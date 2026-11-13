@@ -157,3 +157,4 @@ def test_normalizer_facade_dispatches_http():
     assert event.protocol == "HTTP"
     assert event.username == "backup_user"
     assert event.event_type == EventType.LOGIN_SUCCESS.value
+

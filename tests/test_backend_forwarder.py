@@ -136,3 +136,4 @@ def test_forwarder_flush_retry_queue(temp_queue, monkeypatch):
     flushed_count = forwarder.flush_retry_queue()
     assert flushed_count == 2
     assert temp_queue.count() == 0
+
