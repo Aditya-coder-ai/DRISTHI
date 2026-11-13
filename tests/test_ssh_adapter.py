@@ -79,3 +79,4 @@ def test_normalize_file_upload():
     assert event.event_type == EventType.FILE_UPLOAD.value
     assert event.status == EventStatus.SUCCESS.value
     assert event.metadata.get("filename") == "exploit.sh"
+

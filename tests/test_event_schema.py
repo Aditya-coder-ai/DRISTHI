@@ -74,3 +74,4 @@ def test_security_event_json_serialization():
     assert data["asset_id"] == "ssh-001"
     assert data["source_ip"] == "192.0.2.10"
     assert data["metadata"]["hostname"] == "finance-server"
+

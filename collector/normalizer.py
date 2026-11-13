@@ -10,6 +10,7 @@ from typing import Any, Dict, Optional
 
 from shared.event_schema import SecurityEvent, ProtocolType
 from services.ssh.ssh_event_adapter import CowrieSSHAdapter
+from services.ftp.ftp_event_adapter import FTPEventAdapter
 
 
 class EventNormalizer:
@@ -37,5 +38,9 @@ class EventNormalizer:
         if protocol_upper == ProtocolType.SSH.value:
             return CowrieSSHAdapter.normalize(raw_event, asset_id=asset_id)
 
-        # Later phases will plug in FTP, HTTP, DATABASE adapters here
+        if protocol_upper == ProtocolType.FTP.value:
+            return FTPEventAdapter.normalize(raw_event, asset_id=asset_id)
+
+        # Later phases will plug in HTTP, DATABASE adapters here
         return None
+

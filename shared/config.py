@@ -42,8 +42,19 @@ class Settings:
     SSH_LISTEN_PORT: int = get_env_int("SSH_LISTEN_PORT", 2222)
     SSH_BASE_DIR: Path = BASE_DIR / "services" / "ssh"
     SSH_CONFIG_DIR: Path = SSH_BASE_DIR / "config"
-    SSH_LOG_DIR: Path = SSH_BASE_DIR / "var" / "log" / "cowrie"
+    SSH_LOG_DIR: Path = BASE_DIR / "var" / "log" / "cowrie"
     SSH_JSON_LOG: Path = SSH_LOG_DIR / "cowrie.json"
+
+    # FTP Deception Service (Phase 2)
+    FTP_ASSET_ID: str = get_env_str("FTP_ASSET_ID", "ftp-001")
+    FTP_SERVER_NAME: str = get_env_str("FTP_SERVER_NAME", "Corp-Storage-Node-02")
+    FTP_LISTEN_HOST: str = get_env_str("FTP_LISTEN_HOST", "0.0.0.0")
+    FTP_LISTEN_PORT: int = get_env_int("FTP_LISTEN_PORT", 2121)
+    FTP_BASE_DIR: Path = BASE_DIR / "services" / "ftp"
+    FTP_DECOY_DIR: Path = FTP_BASE_DIR / "decoy_root"
+    FTP_CONFIG_FILE: Path = FTP_BASE_DIR / "config" / "ftp_config.json"
+    FTP_LOG_DIR: Path = BASE_DIR / "var" / "log" / "ftp"
+    FTP_JSON_LOG: Path = FTP_LOG_DIR / "ftp.json"
 
     # Backend Integration (Person 2)
     BACKEND_API_URL: str = get_env_str("BACKEND_API_URL", "http://localhost:8000/api/events")
@@ -53,3 +64,4 @@ class Settings:
 
 
 settings = Settings()
+

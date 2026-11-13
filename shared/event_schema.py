@@ -101,3 +101,4 @@ class SecurityEvent(BaseModel):
         except Exception as exc:
             raise ValueError(f"Invalid timestamp format '{v}', expected ISO 8601 UTC") from exc
         return v
+

@@ -1,0 +1,29 @@
+{
+  "asset_id": "ftp-001",
+  "server_name": "Corp-Storage-Node-02",
+  "banner": "220 Corp-Storage-Node-02 FTP Backup Gateway (v4.2.1) ready.",
+  "listen_host": "0.0.0.0",
+  "listen_port": 2121,
+  "allow_anonymous": false,
+  "idle_timeout_seconds": 300,
+  "users": {
+    "backup_user": {
+      "password": "Backup@2026",
+      "is_bait": true,
+      "home_dir": "/backups/finance",
+      "description": "Bait credential for offsite backup storage node"
+    },
+    "admin": {
+      "password": "CorpFtp@2026",
+      "is_bait": false,
+      "home_dir": "/",
+      "description": "Enterprise Storage Administrator"
+    },
+    "sysadmin": {
+      "password": "Admin@Corp2026",
+      "is_bait": false,
+      "home_dir": "/",
+      "description": "System Operations User"
+    }
+  }
+}

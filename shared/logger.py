@@ -18,3 +18,4 @@ def get_logger(name: str) -> logging.Logger:
         log_level = getattr(logging, settings.LOG_LEVEL.upper(), logging.INFO)
         logger.setLevel(log_level)
     return logger
+

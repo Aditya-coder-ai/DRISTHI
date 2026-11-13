@@ -93,3 +93,4 @@ class EventCollector:
 
 # Global shared collector instance for local operations
 global_collector = EventCollector()
+

@@ -114,3 +114,4 @@ class CowrieSSHAdapter:
             return cls.normalize(data, asset_id=asset_id)
         except Exception:
             return None
+

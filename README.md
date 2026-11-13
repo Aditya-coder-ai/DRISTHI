@@ -18,7 +18,14 @@ deception-assets/
 │   │   ├── runner.py            # Service lifecycle management
 │   │   ├── ssh_event_adapter.py # Cowrie -> SecurityEvent adapter
 │   │   └── README.md
-│   ├── ftp/                     # Phase 2: Fake FTP Server (Pending)
+│   ├── ftp/                     # Phase 2: FTP Deception (Isolated VFS)
+│   │   ├── config/              # Server configuration and credentials
+│   │   ├── decoy_root/          # Virtual decoy directory tree
+│   │   ├── vfs.py               # Virtual Filesystem with traversal protection
+│   │   ├── server.py            # Async RFC 959 FTP Honeypot server
+│   │   ├── runner.py            # Service lifecycle management
+│   │   ├── ftp_event_adapter.py # FTP -> SecurityEvent adapter
+│   │   └── README.md
 │   ├── web/                     # Phase 3: Fake Web Admin Portal (Pending)
 │   └── database/                # Phase 4: Fake Database (Pending)
 ├── credentials/                 # Phase 5: Bait Credentials Management
@@ -63,6 +70,14 @@ deception-assets/
 - Simulates Linux shell safely using Cowrie's virtual filesystem (no host command execution).
 - Collects and normalizes authentication failures, successful logins, command executions, and file transfers into unified `SecurityEvent` schema (`asset_id: ssh-001`).
 
+### Phase 2: FTP Deception (Isolated VFS)
+- Emulates a corporate offsite backup gateway (`Corp-Storage-Node-02` at port 2121).
+- Strictly jailed Virtual Filesystem (VFS) with directory traversal protection; absolute paths, drive letters, and `..` escape vectors cannot access the host filesystem.
+- Populated with rich decoy assets (`customer_database.sql`, `backup.zip`, `db_migration_notes.txt`, `employee_records.csv`, `financial_report.xlsx`).
+- Configured with bait account `backup_user:Backup@2026` discovered on the SSH server.
+- Supports RFC 959 passive mode transfers for listings (`LIST`), downloads (`RETR`), and uploads (`STOR`).
+- Captures and normalizes connection, authentication, directory listings, file downloads, uploads, and path traversal attempts into unified `SecurityEvent` schema (`asset_id: ftp-001`).
+
 ---
 
 ## Quickstart
@@ -87,3 +102,4 @@ uv pip install -r requirements.txt
 # In terminal 2: Run Attack Simulation
 .venv\Scripts\python.exe scripts/simulate_ssh_attack.py
 ```
+

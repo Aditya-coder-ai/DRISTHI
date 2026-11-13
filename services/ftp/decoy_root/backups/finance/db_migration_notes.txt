@@ -1,0 +1,19 @@
+# =====================================================================
+# DATABASE REPLICATION & BACKUP RECOVERY GUIDE
+# =====================================================================
+Primary Database Node: 10.0.1.25:5432
+Cluster Name: db-cluster.corp.internal
+Active Databases:
+  - corp_finance_db (Production accounting & customer ledger)
+  - auth_service_db (User credentials & RBAC)
+
+Backup Schedule:
+  - Nightly differential backup at 02:00 UTC -> customer_database.sql
+  - Weekly full compressed archive at Sunday 03:00 UTC -> backup.zip
+
+Credentials for automated ingestion:
+  User: database_root
+  Auth Token: DBroot@2026
+  (Note: Must rotate via vault before Q1 2027)
+
+Offsite Replication Target: 10.0.1.30:2121 (/backups/finance/)

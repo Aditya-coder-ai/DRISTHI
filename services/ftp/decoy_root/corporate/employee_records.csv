@@ -1,0 +1,8 @@
+employee_id,first_name,last_name,email,department,job_title,hire_date,clearance
+EMP-1001,John,Doe,jdoe@corp.internal,Finance,Senior Financial Analyst,2021-03-15,Confidential
+EMP-1002,Jane,Smith,jsmith@corp.internal,Engineering,Lead Systems Architect,2019-07-01,Secret
+EMP-1003,Robert,Johnson,rjohnson@corp.internal,Executive,Chief Financial Officer,2017-01-10,Top Secret
+EMP-1004,Alice,Williams,awilliams@corp.internal,Operations,Security Specialist,2022-11-20,Secret
+EMP-1005,Michael,Brown,mbrown@corp.internal,Finance,Staff Accountant,2023-05-18,Confidential
+EMP-1006,Sarah,Davis,sdavis@corp.internal,Human Resources,HR Director,2018-09-12,Confidential
+EMP-1007,David,Wilson,dwilson@corp.internal,IT Infrastructure,Database Administrator,2020-02-01,Top Secret
