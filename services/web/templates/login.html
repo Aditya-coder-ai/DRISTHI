@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign In &bull; Apex Internal Management System</title>
+  <link rel="stylesheet" href="/static/css/portal.css">
+</head>
+<body class="login-body">
+  <div class="login-card">
+    <div class="login-header">
+      <span class="brand-badge">Apex Financial Group</span>
+      <h2 style="font-size: 20px; font-weight: 700; margin-top: 8px;">Internal Portal Login</h2>
+      <p style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">Authorized operations personnel only</p>
+    </div>
+
+    {% if error %}
+    <div class="alert-danger">
+      <strong>Authentication Failed:</strong> {{ error }}
+    </div>
+    {% endif %}
+
+    <form method="POST" action="/login">
+      <div>
+        <label for="username" style="font-size: 13px; font-weight: 600; color: var(--text-muted);">Corporate Username / Email</label>
+        <input type="text" id="username" name="username" class="input-field" placeholder="e.g. jdoe or admin" required autocomplete="username" autofocus value="{{ username or '' }}">
+      </div>
+
+      <div>
+        <label for="password" style="font-size: 13px; font-weight: 600; color: var(--text-muted);">Security Password</label>
+        <input type="password" id="password" name="password" class="input-field" placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;" required autocomplete="current-password">
+      </div>
+
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; font-size: 13px;">
+        <label style="display: flex; align-items: center; gap: 8px; color: var(--text-muted); cursor: pointer;">
+          <input type="checkbox" name="remember" value="true"> Remember this device
+        </label>
+        <a href="#" style="color: var(--accent-blue); text-decoration: none;" onclick="alert('Please contact Security Operations: sec-ops@apexfinancial.corp'); return false;">Forgot credentials?</a>
+      </div>
+
+      <button type="submit" class="btn" style="width: 100%; padding: 12px; font-size: 14px;">Sign In to Console</button>
+    </form>
+
+    <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border-color); text-align: center; font-size: 11px; color: var(--text-muted); line-height: 1.5;">
+      NOTICE: This system is restricted to authorized personnel. All connection attempts, access timestamps, and session interactions are monitored and audited under Corporate Security Policy SEC-049.
+    </div>
+  </div>
+</body>
+</html>

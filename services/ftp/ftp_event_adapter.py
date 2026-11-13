@@ -118,3 +118,4 @@ class FTPEventAdapter:
             return cls.normalize(data, asset_id=asset_id)
         except Exception:
             return None
+

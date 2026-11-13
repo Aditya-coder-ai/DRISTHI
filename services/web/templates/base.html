@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Apex Internal Management System{% endblock %}</title>
+  <link rel="stylesheet" href="/static/css/portal.css">
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+  <div class="app-container">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <span class="brand-badge">Internal Operations</span>
+        <h1 class="brand-title">Apex Financial Group</h1>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="/dashboard" class="nav-link {% if active_page == 'dashboard' %}active{% endif %}">
+          Dashboard
+        </a>
+        <a href="/employees" class="nav-link {% if active_page == 'employees' %}active{% endif %}">
+          Employee Directory
+        </a>
+        <a href="/finance" class="nav-link {% if active_page == 'finance' %}active{% endif %}">
+          Financial Reports
+        </a>
+        <a href="/database" class="nav-link {% if active_page == 'database' %}active{% endif %}">
+          Database Management
+        </a>
+        <a href="/configuration" class="nav-link {% if active_page == 'configuration' %}active{% endif %}">
+          System Configuration
+        </a>
+      </nav>
+      <div class="sidebar-footer">
+        <div>Gateway: <strong>web-admin (10.0.1.20)</strong></div>
+        <div style="margin-top: 4px; font-size: 11px;">Restricted Access &bull; Audited</div>
+      </div>
+    </aside>
+
+    <!-- Main Section -->
+    <main class="main-content">
+      <header class="top-bar">
+        <div class="page-title">{% block page_heading %}Dashboard Overview{% endblock %}</div>
+        <div class="user-profile">
+          <div class="user-avatar">{{ username[0]|upper if username else 'A' }}</div>
+          <div>
+            <div style="font-size: 13px; font-weight: 600;">{{ username or 'admin' }}</div>
+            <div style="font-size: 11px; color: var(--text-muted);">{{ role or 'Enterprise Admin' }}</div>
+          </div>
+          <a href="/logout" class="btn btn-secondary" style="margin-left: 16px; padding: 6px 12px; font-size: 12px;">Logout</a>
+        </div>
+      </header>
+
+      <div class="content-body">
+        {% block content %}{% endblock %}
+      </div>
+    </main>
+  </div>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

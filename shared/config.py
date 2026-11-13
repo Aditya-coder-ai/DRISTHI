@@ -32,6 +32,7 @@ def get_env_bool(key: str, default: bool) -> bool:
 
 class Settings:
     # General
+    BASE_DIR: Path = BASE_DIR
     DECEPTION_ENV: str = get_env_str("DECEPTION_ENV", "development")
     LOG_LEVEL: str = get_env_str("LOG_LEVEL", "INFO")
 
@@ -55,6 +56,15 @@ class Settings:
     FTP_CONFIG_FILE: Path = FTP_BASE_DIR / "config" / "ftp_config.json"
     FTP_LOG_DIR: Path = BASE_DIR / "var" / "log" / "ftp"
     FTP_JSON_LOG: Path = FTP_LOG_DIR / "ftp.json"
+
+    # Web Admin Deception Service (Phase 3)
+    WEB_ASSET_ID: str = get_env_str("WEB_ASSET_ID", "web-001")
+    WEB_PORTAL_NAME: str = get_env_str("WEB_PORTAL_NAME", "Apex Internal Management System")
+    WEB_LISTEN_HOST: str = get_env_str("WEB_LISTEN_HOST", "0.0.0.0")
+    WEB_LISTEN_PORT: int = get_env_int("WEB_LISTEN_PORT", 8080)
+    WEB_BASE_DIR: Path = BASE_DIR / "services" / "web"
+    WEB_LOG_DIR: Path = BASE_DIR / "var" / "log" / "web"
+    WEB_JSON_LOG: Path = WEB_LOG_DIR / "web.json"
 
     # Backend Integration (Person 2)
     BACKEND_API_URL: str = get_env_str("BACKEND_API_URL", "http://localhost:8000/api/events")

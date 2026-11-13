@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}Employee Management &bull; Apex Internal Management System{% endblock %}
+{% block page_heading %}Employee Directory &amp; Access Roster{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-title">
+    <span>Corporate Personnel Records</span>
+    <div style="display: flex; gap: 10px;">
+      <input type="text" placeholder="Search employees by name, id or dept..." class="input-field" style="margin: 0; padding: 6px 12px; width: 300px; font-size: 13px;" onkeyup="filterEmployees(this.value)">
+    </div>
+  </div>
+
+  <table class="data-table" id="employeeTable">
+    <thead>
+      <tr>
+        <th>Employee ID</th>
+        <th>Full Name</th>
+        <th>Department</th>
+        <th>Designation</th>
+        <th>Corporate Email</th>
+        <th>Employment Status</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for emp in employees %}
+      <tr>
+        <td><code>{{ emp.id }}</code></td>
+        <td style="font-weight: 600;">{{ emp.name }}</td>
+        <td>{{ emp.department }}</td>
+        <td>{{ emp.designation }}</td>
+        <td><a href="mailto:{{ emp.email }}" style="color: #60a5fa; text-decoration: none;">{{ emp.email }}</a></td>
+        <td><span class="badge badge-active">{{ emp.status }}</span></td>
+        <td>
+          <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 11px;" onclick="viewEmployee('{{ emp.id }}', '{{ emp.name }}')">View Profile</button>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function filterEmployees(query) {
+  const rows = document.querySelectorAll("#employeeTable tbody tr");
+  query = query.toLowerCase();
+  rows.forEach(row => {
+    const text = row.innerText.toLowerCase();
+    row.style.display = text.includes(query) ? "" : "none";
+  });
+}
+
+function viewEmployee(id, name) {
+  alert("Profile view for " + name + " (" + id + ") logged for security audit.");
+}
+</script>
+{% endblock %}

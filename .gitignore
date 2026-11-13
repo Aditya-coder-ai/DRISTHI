@@ -12,7 +12,9 @@ __pycache__/
 .coverage
 htmlcov/
 
-# Cowrie runtime data & logs
+# Honeypot runtime uploads & quarantine
+services/ftp/uploads/*
+!services/ftp/uploads/.gitkeep
 var/
 services/ssh/var/
 services/ssh/log/

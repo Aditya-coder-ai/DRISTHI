@@ -17,3 +17,4 @@ Credentials for automated ingestion:
   (Note: Must rotate via vault before Q1 2027)
 
 Offsite Replication Target: 10.0.1.30:2121 (/backups/finance/)
+

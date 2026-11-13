@@ -80,3 +80,4 @@ def test_vfs_file_read_and_store():
     stored = vfs.store_file("/backups/finance/probe.sh", test_content)
     assert stored is True
     assert vfs.read_file("/backups/finance/probe.sh") == test_content
+

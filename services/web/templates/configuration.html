@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}System Configuration &bull; Apex Internal Management System{% endblock %}
+{% block page_heading %}System Architecture &amp; Environmental Configuration{% endblock %}
+
+{% block content %}
+<!-- Host Environment Details -->
+<div class="card">
+  <div class="card-title">
+    <span>Production Gateway Runtime Environment</span>
+    <span class="badge badge-online">Node: web-admin.corp.internal</span>
+  </div>
+  <table class="data-table">
+    <tbody>
+      <tr>
+        <td style="width: 250px; font-weight: 600; color: var(--text-muted);">Internal Hostname</td>
+        <td><code>web-admin.corp.internal</code> (10.0.1.20)</td>
+      </tr>
+      <tr>
+        <td style="font-weight: 600; color: var(--text-muted);">Operating System</td>
+        <td>Linux Ubuntu 22.04.4 LTS (Kernel 6.1.0-21-amd64)</td>
+      </tr>
+      <tr>
+        <td style="font-weight: 600; color: var(--text-muted);">Web Application Server</td>
+        <td>FastAPI 0.115 / Uvicorn ASGI Daemon</td>
+      </tr>
+      <tr>
+        <td style="font-weight: 600; color: var(--text-muted);">Connected SSH Bastion</td>
+        <td><code>finance-server.corp.internal:2222</code> (10.0.1.15) &bull; Verified Active</td>
+      </tr>
+      <tr>
+        <td style="font-weight: 600; color: var(--text-muted);">Offsite Backup Target</td>
+        <td><code>backup-storage.corp.internal:2121</code> (10.0.1.30) &bull; Verified Active</td>
+      </tr>
+      <tr>
+        <td style="font-weight: 600; color: var(--text-muted);">Relational Database Node</td>
+        <td><code>db-cluster.corp.internal:5432</code> (10.0.1.25) &bull; Verified Active</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- Decoy Configuration Files -->
+<div class="card" style="border-left: 4px solid var(--accent-amber);">
+  <div class="card-title">
+    <span>Internal Configuration Profiles &amp; Bait Artifacts</span>
+    <span class="badge badge-pending">Confidential Profiles</span>
+  </div>
+  <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 20px;">
+    System configuration templates and connection strings. Access to these profiles is monitored and audited.
+  </p>
+
+  <div style="display: flex; flex-direction: column; gap: 16px;">
+    {% for cfg_name, cfg in configs.items() %}
+    <div style="padding: 16px; background: rgba(15, 23, 42, 0.4); border-radius: 8px; border: 1px solid var(--border-color);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <div>
+          <span style="font-weight: 700; font-size: 15px;">{{ cfg_name }}</span>
+          <span style="font-size: 12px; color: var(--text-muted); margin-left: 10px;">{{ cfg.description }}</span>
+        </div>
+        <a href="/configuration/view/{{ cfg_name }}" class="btn btn-secondary" style="font-size: 12px; padding: 6px 14px;">View Raw Configuration</a>
+      </div>
+      <pre style="background: #0f172a; padding: 12px; border-radius: 6px; font-size: 12px; color: #93c5fd; overflow-x: auto; margin: 0; border: 1px solid rgba(255,255,255,0.05);">{{ cfg.raw }}</pre>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

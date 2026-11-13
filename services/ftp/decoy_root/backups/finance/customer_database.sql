@@ -76,3 +76,4 @@ INSERT INTO `invoices` VALUES
 UNLOCK TABLES;
 
 -- Dump completed on 2026-11-12 02:00:05
+

@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard &bull; Apex Internal Management System{% endblock %}
+{% block page_heading %}Executive Operations Dashboard{% endblock %}
+
+{% block content %}
+<!-- KPI Stats Row -->
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="stat-label">Total Employees</div>
+    <div class="stat-value">148</div>
+    <div style="font-size: 12px; color: var(--accent-green); margin-top: 4px;">&uarr; 4 new this quarter</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Active Corporate Accounts</div>
+    <div class="stat-value">1,240</div>
+    <div style="font-size: 12px; color: var(--accent-green); margin-top: 4px;">&uarr; 98.4% retention rate</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Pending Invoices</div>
+    <div class="stat-value">$456,200</div>
+    <div style="font-size: 12px; color: var(--accent-amber); margin-top: 4px;">3 invoices overdue</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Monthly Gross Revenue</div>
+    <div class="stat-value">$3,840,000</div>
+    <div style="font-size: 12px; color: var(--accent-green); margin-top: 4px;">Target achieved</div>
+  </div>
+</div>
+
+<!-- System Status Grid -->
+<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px;">
+  <!-- Left Column: Recent Activities -->
+  <div class="card">
+    <div class="card-title">
+      <span>Recent Operations &amp; Audit Trail</span>
+      <span style="font-size: 12px; color: var(--text-muted);">Real-time SIEM synced</span>
+    </div>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Timestamp</th>
+          <th>Activity Description</th>
+          <th>Host Node</th>
+          <th>Operator</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for act in activities %}
+        <tr>
+          <td style="color: var(--text-muted); font-size: 13px;">{{ act.timestamp }}</td>
+          <td><strong>{{ act.event }}</strong></td>
+          <td><code>{{ act.node }}</code></td>
+          <td><span class="badge badge-enterprise">{{ act.user }}</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Right Column: Infrastructure Nodes -->
+  <div class="card">
+    <div class="card-title">
+      <span>Infrastructure Topology</span>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 14px;">
+      {% for node in nodes %}
+      <div style="padding: 12px; background: rgba(15, 23, 42, 0.4); border-radius: 6px; border: 1px solid var(--border-color);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+          <span style="font-weight: 600; font-size: 13px;">{{ node.name }}</span>
+          <span class="badge badge-online">{{ node.status }}</span>
+        </div>
+        <div style="font-size: 12px; color: var(--text-muted);">{{ node.hostname }}</div>
+        <div style="font-size: 11px; color: #60a5fa; margin-top: 2px;">{{ node.service }} &bull; <code>{{ node.ip }}</code></div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

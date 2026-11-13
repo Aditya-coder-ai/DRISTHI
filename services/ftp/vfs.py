@@ -209,3 +209,4 @@ class VirtualFilesystem:
             size = getattr(node, "size", len(getattr(node, "_content", b"") or b""))
 
         return f"{mode}  {nlinks:2d} ftp  backup_user  {size:8d} {date_str} {name}"
+

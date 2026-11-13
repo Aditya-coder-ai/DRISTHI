@@ -103,3 +103,4 @@ def test_normalize_ftp_suspicious_request():
     assert event.status == EventStatus.DETECTED.value
     assert event.metadata.get("command") == "CWD"
     assert event.metadata.get("alert_priority") == "MEDIUM"
+

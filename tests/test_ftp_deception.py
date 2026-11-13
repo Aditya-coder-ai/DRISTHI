@@ -177,3 +177,4 @@ def test_ftp_successful_bait_login_and_operations(running_ftp_server):
         assert ev.protocol == "FTP"
         assert ev.event_id is not None
         assert ev.timestamp.endswith("Z")
+

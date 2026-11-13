@@ -64,3 +64,4 @@ def generate_binaries():
 
 if __name__ == "__main__":
     generate_binaries()
+

@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block title %}Financial Operations &bull; Apex Internal Management System{% endblock %}
+{% block page_heading %}Financial Operations &amp; Ledger Audit{% endblock %}
+
+{% block content %}
+<!-- Decoy Financial Documents Section -->
+<div class="card" style="border-left: 4px solid var(--accent-blue);">
+  <div class="card-title">
+    <span>Confidential Decoy Financial Reports</span>
+    <span class="badge badge-enterprise">Executive Access Only</span>
+  </div>
+  <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">
+    Official financial audit documentation, tax filings, and consolidated revenue statements for internal compliance and executive review.
+  </p>
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
+    <div style="padding: 16px; background: rgba(15, 23, 42, 0.5); border-radius: 6px; border: 1px solid var(--border-color);">
+      <div style="font-weight: 600; font-size: 14px; margin-bottom: 4px;">Q4 Consolidated Financials (PDF)</div>
+      <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">Audited revenue statement &bull; 18.5 KB</div>
+      <a href="/finance/download/Q4_consolidated_financials.pdf" class="btn" style="padding: 6px 12px; font-size: 12px;">Download PDF</a>
+    </div>
+
+    <div style="padding: 16px; background: rgba(15, 23, 42, 0.5); border-radius: 6px; border: 1px solid var(--border-color);">
+      <div style="font-weight: 600; font-size: 14px; margin-bottom: 4px;">Payroll Tax Filing 2026 (XLSX)</div>
+      <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">Withholding summary &amp; EIN filing &bull; 12.4 KB</div>
+      <a href="/finance/download/payroll_tax_filing_2026.xlsx" class="btn" style="padding: 6px 12px; font-size: 12px;">Download XLSX</a>
+    </div>
+
+    <div style="padding: 16px; background: rgba(15, 23, 42, 0.5); border-radius: 6px; border: 1px solid var(--border-color);">
+      <div style="font-weight: 600; font-size: 14px; margin-bottom: 4px;">Annual Audit Summary (CSV)</div>
+      <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">Departmental budget variance ledger &bull; 3.4 KB</div>
+      <a href="/finance/download/annual_audit_summary.csv" class="btn" style="padding: 6px 12px; font-size: 12px;">Download CSV</a>
+    </div>
+  </div>
+</div>
+
+<!-- Customer Ledger & Invoices -->
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+  <div class="card">
+    <div class="card-title">
+      <span>Enterprise Customer Accounts</span>
+    </div>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Client Name</th>
+          <th>Account Tier</th>
+          <th>Credit Limit</th>
+          <th>Tax ID</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for cust in customers %}
+        <tr>
+          <td style="font-weight: 600;">{{ cust.name }}</td>
+          <td><span class="badge {% if cust.tier == 'Enterprise' %}badge-enterprise{% else %}badge-strategic{% endif %}">{{ cust.tier }}</span></td>
+          <td>${{ "{:,.2f}".format(cust.balance) }}</td>
+          <td><code>{{ cust.tax_id }}</code></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="card-title">
+      <span>Recent Accounts Receivable Invoices</span>
+    </div>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Invoice #</th>
+          <th>Client</th>
+          <th>Amount</th>
+          <th>Status</th>
+          <th>Due Date</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for inv in invoices %}
+        <tr>
+          <td><code>{{ inv.id }}</code></td>
+          <td>{{ inv.customer }}</td>
+          <td style="font-weight: 600;">{{ inv.amount }}</td>
+          <td>
+            <span class="badge {% if inv.status == 'Paid' %}badge-paid{% elif inv.status == 'Pending' %}badge-pending{% else %}badge-overdue{% endif %}">
+              {{ inv.status }}
+            </span>
+          </td>
+          <td style="color: var(--text-muted);">{{ inv.date }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

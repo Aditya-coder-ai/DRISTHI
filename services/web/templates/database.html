@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}Database Management &bull; Apex Internal Management System{% endblock %}
+{% block page_heading %}Database Cluster Management &amp; Query Console{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-title">
+    <span>Production Relational Cluster Overview</span>
+    <span class="badge badge-online">Cluster Status: Healthy (Primary Active)</span>
+  </div>
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 20px;">
+    <div style="padding: 12px; background: rgba(15, 23, 42, 0.4); border-radius: 6px; border: 1px solid var(--border-color);">
+      <div style="font-size: 11px; color: var(--text-muted);">CLUSTER HOST</div>
+      <div style="font-weight: 600; font-size: 14px; margin-top: 2px;">db-cluster.corp.internal</div>
+      <div style="font-size: 11px; color: #60a5fa;">10.0.1.25:5432</div>
+    </div>
+    <div style="padding: 12px; background: rgba(15, 23, 42, 0.4); border-radius: 6px; border: 1px solid var(--border-color);">
+      <div style="font-size: 11px; color: var(--text-muted);">TARGET DATABASE</div>
+      <div style="font-weight: 600; font-size: 14px; margin-top: 2px;">corp_finance_db</div>
+      <div style="font-size: 11px; color: var(--accent-green);">PostgreSQL 15.4 / MySQL 8.0</div>
+    </div>
+    <div style="padding: 12px; background: rgba(15, 23, 42, 0.4); border-radius: 6px; border: 1px solid var(--border-color);">
+      <div style="font-size: 11px; color: var(--text-muted);">AUTHENTICATED USER</div>
+      <div style="font-weight: 600; font-size: 14px; margin-top: 2px;">database_root</div>
+      <div style="font-size: 11px; color: var(--text-muted);">Superuser Privilege</div>
+    </div>
+    <div style="padding: 12px; background: rgba(15, 23, 42, 0.4); border-radius: 6px; border: 1px solid var(--border-color);">
+      <div style="font-size: 11px; color: var(--text-muted);">ACTIVE TABLES</div>
+      <div style="font-weight: 600; font-size: 14px; margin-top: 2px;">5 Relational Tables</div>
+      <div style="font-size: 11px; color: var(--text-muted);">Total Rows: 2,490</div>
+    </div>
+  </div>
+
+  <!-- Safe Query Console -->
+  <div style="margin-top: 20px;">
+    <div style="font-weight: 600; font-size: 14px; margin-bottom: 8px;">Interactive SQL Management Console</div>
+    <form method="POST" action="/database/query">
+      <textarea name="query" class="input-field" style="font-family: monospace; height: 90px; resize: vertical;" placeholder="SELECT * FROM customers WHERE account_tier = 'Enterprise' LIMIT 10;">{{ query or "SELECT * FROM customers LIMIT 5;" }}</textarea>
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-size: 12px; color: var(--text-muted);">Safe execution sandbox &bull; Read-only enforcement</span>
+        <button type="submit" class="btn">Execute Query</button>
+      </div>
+    </form>
+
+    {% if query_result %}
+    <div style="margin-top: 20px;">
+      <div style="font-size: 13px; font-weight: 600; margin-bottom: 8px; color: var(--accent-green);">Query Result ({{ query_rows|length }} rows returned)</div>
+      <table class="data-table">
+        <thead>
+          <tr>
+            {% for col in query_columns %}
+            <th>{{ col }}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in query_rows %}
+          <tr>
+            {% for val in row %}
+            <td>{{ val }}</td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
