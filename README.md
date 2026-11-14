@@ -1,10 +1,10 @@
-# Deception-Based Cybersecurity Platform — Person 1 Module
-## Deception Assets & Honeypot Infrastructure (Phases 1–7 Complete)
+# DRISTHI — Adaptive Distributed Cyber Deception Platform
+## Integrated Deception Infrastructure & Central Backend (Person 1 & Person 2 Complete)
 
-### Author & Role
-- **Role**: Senior Cybersecurity Engineer, Python Backend Developer, Honeypot Infrastructure Specialist (Person 1)
-- **Objective**: Realistic, controlled deception environment containing fake services, decoy systems, bait credentials, canary detection, and normalized event forwarding.
-- **Current Status**: **ALL 7 PHASES COMPLETE & FULLY OPERATIONAL (61 / 61 TESTS PASSING)**
+### Platform Modules
+- **Person 1**: Deception Assets, HoneyFS, Bait Credentials, Canary Detection, and Forwarder Daemon (**61 / 61 tests passing**).
+- **Person 2**: Central Backend, Relational Persistence (PostgreSQL/SQLAlchemy), Session Management, Attacker Profiling, REST APIs, WebSockets, and MITRE ATT&CK integration (**28 / 28 tests passing**).
+- **Current Status**: **ALL PHASES COMPLETE & FULLY OPERATIONAL (89 / 89 TESTS PASSING)**
 
 ---
 
@@ -239,6 +239,12 @@ tests/test_web_portal.py::test_logout_terminates_session PASSED
 # Collector Forwarding Daemon
 .venv\Scripts\python.exe collector/daemon.py start
 .venv\Scripts\python.exe collector/daemon.py health
+
+# Central Backend Server (Port 8000)
+.venv\Scripts\python.exe -m uvicorn backend.app.main:app --host 0.0.0.0 --port 8000
+
+# Full Automated Test Suite (89 Tests)
+.venv\Scripts\python.exe -m pytest tests/ backend/tests/ -v
 ```
 
 ### 2. Multi-Container Deployment via Docker Compose
