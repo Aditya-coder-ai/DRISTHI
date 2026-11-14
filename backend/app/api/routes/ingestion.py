@@ -17,6 +17,12 @@ router = APIRouter()
     summary="Ingest deception telemetry events (Person 1 Forwarder contract)",
 )
 @router.post(
+    "/ingest",
+    response_model=IngestionResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Event Ingestion Alias Endpoint",
+)
+@router.post(
     "/ingestion/events",
     response_model=IngestionResponse,
     status_code=status.HTTP_201_CREATED,

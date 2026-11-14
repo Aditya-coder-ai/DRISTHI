@@ -2,7 +2,7 @@
 
 from datetime import datetime
 from typing import List, Optional
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class AttackerSessionResponse(BaseModel):
@@ -26,3 +26,10 @@ class PaginatedSessionsResponse(BaseModel):
     page_size: int
     total_pages: int
     items: List[AttackerSessionResponse]
+    limit: Optional[int] = None
+
+    @model_validator(mode="after")
+    def sync_limit(self) -> "PaginatedSessionsResponse":
+        if self.limit is None:
+            self.limit = self.page_size
+        return self

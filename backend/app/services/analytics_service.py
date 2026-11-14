@@ -71,6 +71,10 @@ class AnalyticsService:
                     cmd_counter[c] += 1
         top_commands = [CommandCountItem(command=cmd, count=cnt) for cmd, cnt in cmd_counter.most_common(10)]
 
+        # Recent events for direct dashboard widget display
+        recent_records = self.db.query(AttackEvent).order_by(desc(AttackEvent.timestamp)).limit(10).all()
+        recent_events = [r.to_dict() for r in recent_records]
+
         return DashboardStatsResponse(
             total_events=total_events,
             unique_attackers=unique_attackers,
@@ -80,6 +84,7 @@ class AnalyticsService:
             top_targeted_services=top_services,
             top_usernames=top_usernames,
             top_commands=top_commands,
+            recent_events=recent_events,
         )
 
     def get_timeline(self, hours: int = 24) -> TimelineResponse:

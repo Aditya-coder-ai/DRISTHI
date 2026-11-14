@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional
 import uuid
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class SeverityLevel(str, Enum):
@@ -68,6 +68,13 @@ class PaginatedEventsResponse(BaseModel):
     page_size: int
     total_pages: int
     items: List[AttackEventResponse]
+    limit: Optional[int] = None
+
+    @model_validator(mode="after")
+    def sync_limit(self) -> "PaginatedEventsResponse":
+        if self.limit is None:
+            self.limit = self.page_size
+        return self
 
 
 class IngestionResponse(BaseModel):

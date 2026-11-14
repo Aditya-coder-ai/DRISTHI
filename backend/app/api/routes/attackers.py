@@ -17,6 +17,7 @@ def list_attackers(
     db: Session = Depends(get_db),
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Items per page"),
+    limit: Optional[int] = Query(None, ge=1, le=100, description="Alias for page_size"),
     min_severity: Optional[str] = Query(None, description="Minimum observed severity"),
     search: Optional[str] = Query(None, description="Search by source IP"),
 ):
@@ -33,15 +34,17 @@ def list_attackers(
 
     query = query.order_by(desc(AttackerProfile.last_seen))
 
+    effective_page_size = limit if limit is not None else page_size
     total = query.count()
-    total_pages = ceil(total / page_size) if total > 0 else 1
-    offset = (page - 1) * page_size
-    items = query.offset(offset).limit(page_size).all()
+    total_pages = ceil(total / effective_page_size) if total > 0 else 1
+    offset = (page - 1) * effective_page_size
+    items = query.offset(offset).limit(effective_page_size).all()
 
     return PaginatedAttackersResponse(
         total=total,
         page=page,
-        page_size=page_size,
+        page_size=effective_page_size,
+        limit=effective_page_size,
         total_pages=total_pages,
         items=[it.to_dict() for it in items],
     )

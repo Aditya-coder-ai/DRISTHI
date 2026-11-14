@@ -2,7 +2,8 @@
 
 import os
 from pathlib import Path
-from typing import List, Optional
+from typing import Any, List, Optional, Union
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -30,6 +31,7 @@ class BackendSettings(BaseSettings):
     BACKEND_API_KEY: Optional[str] = os.getenv("BACKEND_API_KEY", "")
 
     # Allowed CORS Origins for Dashboard UI
+    FRONTEND_ORIGINS: Optional[str] = os.getenv("FRONTEND_ORIGINS", None)
     CORS_ORIGINS: List[str] = [
         "http://localhost:3000",
         "http://localhost:5173",
@@ -37,6 +39,32 @@ class BackendSettings(BaseSettings):
         "http://127.0.0.1:5173",
         "http://localhost:8080",
     ]
+
+    @field_validator("CORS_ORIGINS", mode="before")
+    @classmethod
+    def assemble_cors_origins(cls, v: Any) -> List[str]:
+        default_origins = [
+            "http://localhost:3000",
+            "http://localhost:5173",
+            "http://127.0.0.1:3000",
+            "http://127.0.0.1:5173",
+            "http://localhost:8080",
+        ]
+        origins_to_check = os.getenv("FRONTEND_ORIGINS") or os.getenv("CORS_ORIGINS")
+        if origins_to_check:
+            if origins_to_check.strip().startswith("["):
+                import json
+                try:
+                    return json.loads(origins_to_check)
+                except Exception:
+                    pass
+            parsed = [i.strip() for i in origins_to_check.split(",") if i.strip()]
+            if parsed:
+                # Merge with default development origins, preserving uniqueness
+                return list(dict.fromkeys(default_origins + parsed))
+        if isinstance(v, list):
+            return v
+        return default_origins
 
     # Session Lifecycle Thresholds
     SESSION_IDLE_TIMEOUT_SECONDS: int = 1800  # 30 mins idle -> session closed
