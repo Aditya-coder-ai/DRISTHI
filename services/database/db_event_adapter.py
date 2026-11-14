@@ -88,3 +88,4 @@ class DatabaseEventAdapter:
             status=status,
             metadata=metadata,
         )
+

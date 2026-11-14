@@ -292,3 +292,4 @@ class CredentialRegistry:
 
 # Global singleton instance
 global_registry = CredentialRegistry()
+

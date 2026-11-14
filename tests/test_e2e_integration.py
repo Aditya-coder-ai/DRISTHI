@@ -152,3 +152,4 @@ def test_full_cross_service_lifecycle_e2e(e2e_system, monkeypatch):
     stats = daemon.get_stats()
     assert stats["status"] == "HEALTHY"
     assert stats["total_delivered"] == 6
+

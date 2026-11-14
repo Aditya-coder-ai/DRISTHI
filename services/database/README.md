@@ -62,3 +62,4 @@ services/database/
 ```powershell
 .venv\Scripts\python.exe -m pytest tests/test_database_deception.py -v
 ```
+

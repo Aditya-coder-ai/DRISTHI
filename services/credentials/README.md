@@ -42,3 +42,4 @@ is_bait, canary_event, reuse_event = global_registry.evaluate_interaction(
     protocol="DATABASE",
 )
 ```
+

@@ -344,3 +344,4 @@ class MySQLServer:
             self.server.close()
             await self.server.wait_closed()
             logger.info("MySQL Honeypot stopped.")
+

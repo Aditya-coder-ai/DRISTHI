@@ -90,7 +90,7 @@ async def _run_async(pg_port: int, mysql_port: int, host: str) -> None:
 
     try:
         await stop_event.wait()
-    except asyncio.CancelledError:
+    except (asyncio.CancelledError, KeyboardInterrupt):
         pass
     finally:
         await pg_server.stop()
@@ -238,3 +238,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+

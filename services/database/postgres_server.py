@@ -281,3 +281,4 @@ class PostgresServer:
             self.server.close()
             await self.server.wait_closed()
             logger.info("PostgreSQL Honeypot stopped.")
+

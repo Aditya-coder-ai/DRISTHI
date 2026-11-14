@@ -43,3 +43,4 @@ ENV PYTHONPATH=/app \
     PYTHONUNBUFFERED=1
 
 CMD ["python", "--version"]
+

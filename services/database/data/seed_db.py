@@ -143,3 +143,4 @@ def get_query_result(query: str, current_db: str = "corporate_finance") -> Tuple
 
     # Default fallback response
     return ["status", "response"], [["OK", "Query parsed successfully. 0 rows affected."]]
+

@@ -108,3 +108,4 @@ def test_credential_rotation(temp_registry):
     assert rotated is not None
     assert rotated.verify_password("NewBackupPass@2026") is True
     assert rotated.password_hash != orig_hash
+

@@ -94,3 +94,4 @@ def test_daemon_flush_failure_and_degraded_status(temp_daemon_env, monkeypatch):
     assert flushed == 0
     assert queue.count() == 2
     assert daemon.failed_deliveries >= 1
+
