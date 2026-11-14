@@ -1,0 +1,86 @@
+version: '3.8'
+
+services:
+  ssh-honeypot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: drishti-ssh-honeypot
+    command: ["python", "services/ssh/runner.py", "run", "--host", "0.0.0.0", "--port", "2222"]
+    ports:
+      - "2222:2222"
+    volumes:
+      - ./var/log/cowrie:/app/var/log/cowrie
+    environment:
+      - DECEPTION_ENV=production
+      - LOG_LEVEL=INFO
+    restart: unless-stopped
+
+  ftp-honeypot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: drishti-ftp-honeypot
+    command: ["python", "services/ftp/runner.py", "run", "--host", "0.0.0.0", "--port", "2121"]
+    ports:
+      - "2121:2121"
+    volumes:
+      - ./var/log/ftp:/app/var/log/ftp
+      - ./services/ftp/uploads:/app/services/ftp/uploads
+    environment:
+      - DECEPTION_ENV=production
+      - LOG_LEVEL=INFO
+    restart: unless-stopped
+
+  web-honeypot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: drishti-web-honeypot
+    command: ["python", "services/web/runner.py", "run", "--host", "0.0.0.0", "--port", "8080"]
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./var/log/web:/app/var/log/web
+    environment:
+      - DECEPTION_ENV=production
+      - LOG_LEVEL=INFO
+    restart: unless-stopped
+
+  db-honeypot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: drishti-db-honeypot
+    command: ["python", "services/database/runner.py", "run", "--host", "0.0.0.0", "--pg-port", "5432", "--mysql-port", "3306"]
+    ports:
+      - "5432:5432"
+      - "3306:3306"
+    volumes:
+      - ./var/log/database:/app/var/log/database
+    environment:
+      - DECEPTION_ENV=production
+      - LOG_LEVEL=INFO
+    restart: unless-stopped
+
+  collector-daemon:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: drishti-collector-daemon
+    command: ["python", "collector/daemon.py", "run", "--interval", "2.0"]
+    volumes:
+      - ./var/log:/app/var/log
+      - ./var/data:/app/var/data
+      - ./var/run:/app/var/run
+    environment:
+      - DECEPTION_ENV=production
+      - BACKEND_API_URL=${BACKEND_API_URL:-http://localhost:8000/api/events}
+      - BACKEND_API_KEY=${BACKEND_API_KEY:-}
+      - EVENT_BATCH_SIZE=50
+      - RETRY_LIMIT=5
+    restart: unless-stopped
+
+networks:
+  default:
+    name: drishti-deception-net

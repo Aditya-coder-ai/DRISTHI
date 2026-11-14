@@ -66,6 +66,26 @@ class Settings:
     WEB_LOG_DIR: Path = BASE_DIR / "var" / "log" / "web"
     WEB_JSON_LOG: Path = WEB_LOG_DIR / "web.json"
 
+    # Database Deception Service (Phase 4)
+    DB_ASSET_ID: str = get_env_str("DB_ASSET_ID", "db-001")
+    DB_SERVER_NAME: str = get_env_str("DB_SERVER_NAME", "db-cluster.corp.internal")
+    DB_PG_LISTEN_HOST: str = get_env_str("DB_PG_LISTEN_HOST", "0.0.0.0")
+    DB_PG_LISTEN_PORT: int = get_env_int("DB_PG_LISTEN_PORT", 5432)
+    DB_MYSQL_LISTEN_HOST: str = get_env_str("DB_MYSQL_LISTEN_HOST", "0.0.0.0")
+    DB_MYSQL_LISTEN_PORT: int = get_env_int("DB_MYSQL_LISTEN_PORT", 3306)
+    DB_BASE_DIR: Path = BASE_DIR / "services" / "database"
+    DB_LOG_DIR: Path = BASE_DIR / "var" / "log" / "database"
+    DB_JSON_LOG: Path = DB_LOG_DIR / "database.json"
+
+    # Dynamic Bait Credentials & Canaries (Phase 5)
+    CREDENTIALS_FILE: Path = BASE_DIR / "credentials" / "decoy_credentials.json"
+    CREDENTIALS_DIR: Path = BASE_DIR / "services" / "credentials"
+    CREDENTIALS_AUDIT_LOG: Path = BASE_DIR / "var" / "log" / "credentials" / "audit.json"
+
+    # Central Event Collection & Forwarding Daemon (Phase 6)
+    DAEMON_FLUSH_INTERVAL: float = float(get_env_str("DAEMON_FLUSH_INTERVAL", "2.0"))
+    DAEMON_PID_FILE: Path = BASE_DIR / "var" / "run" / "collector_daemon.pid"
+
     # Backend Integration (Person 2)
     BACKEND_API_URL: str = get_env_str("BACKEND_API_URL", "http://localhost:8000/api/events")
     BACKEND_API_KEY: Optional[str] = os.environ.get("BACKEND_API_KEY")

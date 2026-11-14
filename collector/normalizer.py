@@ -12,6 +12,7 @@ from shared.event_schema import SecurityEvent, ProtocolType
 from services.ssh.ssh_event_adapter import CowrieSSHAdapter
 from services.ftp.ftp_event_adapter import FTPEventAdapter
 from services.web.web_event_adapter import WebEventAdapter
+from services.database.db_event_adapter import DatabaseEventAdapter
 
 
 class EventNormalizer:
@@ -45,6 +46,8 @@ class EventNormalizer:
         if protocol_upper == ProtocolType.HTTP.value:
             return WebEventAdapter.normalize(raw_event, asset_id=asset_id)
 
-        # Later phases will plug in DATABASE adapters here
+        if protocol_upper in (ProtocolType.DATABASE.value, "POSTGRESQL", "MYSQL"):
+            return DatabaseEventAdapter.normalize(raw_event, asset_id=asset_id)
+
         return None
 

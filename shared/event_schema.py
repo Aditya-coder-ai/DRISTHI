@@ -43,6 +43,9 @@ class EventType(str, Enum):
     SESSION_DISCONNECT = "session_disconnect"
     QUERY_EXECUTION = "query_execution"
     BAIT_CREDENTIAL_TRIGGER = "bait_credential_trigger"
+    CANARY_TRIGGERED = "canary_triggered"
+    CREDENTIAL_REUSE = "credential_reuse"
+    DATABASE_ENUMERATION = "database_enumeration"
     SUSPICIOUS_REQUEST = "suspicious_request"
 
 
