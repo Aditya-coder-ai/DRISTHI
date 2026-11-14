@@ -8,28 +8,28 @@ This document specifies the phased delivery roadmap for the Central Backend & Da
 - Verify environment and all 61 existing tests passing.
 - Document event contract and communication patterns.
 
-### Phase 1: Target Architecture & Project Harness (IN PROGRESS)
+### Phase 1: Target Architecture & Project Harness (COMPLETED)
 - Establish harness documents: `AGENTS.md`, `ARCHITECTURE.md`, `IMPLEMENTATION_PLAN.md`, `TASKS.md`, `DECISIONS.md`, `API_CONTRACT.md`, `DATABASE_SCHEMA.md`, `TESTING.md`.
 - Layout modular backend directory in `backend/app/`.
 
-### Phase 2: Database Layer & Entity Models
+### Phase 2: Database Layer & Entity Models (COMPLETED)
 - Implement SQLAlchemy 2.0 models: `AttackEvent`, `AttackerSession`, `AttackerProfile`, `MitreMapping`.
 - Support PostgreSQL (with JSONB dialect) and SQLite fallback for local test execution.
 - Create Alembic migration harness and initial revision script.
 - Connection pooling and session lifecycle management.
 
-### Phase 3: Central Event Ingestion Pipeline & Adapters
+### Phase 3: Central Event Ingestion Pipeline & Adapters (COMPLETED)
 - Ingestion routes: `POST /api/events` and `POST /api/ingestion/events`.
 - Authentication via `BACKEND_API_KEY` (Bearer / header).
 - Ingestion adapters for Person 1's `SecurityEvent` schema and generic platform schemas.
 - Ingestion service: validation, deduplication, timestamp normalization, transaction safety.
 
-### Phase 4: Attacker Session & Behavioral Profile Management
+### Phase 4: Attacker Session & Behavioral Profile Management (COMPLETED)
 - Session manager: state transitions (`active`, `idle`, `closed`), `first_seen`, `last_seen`, `services_accessed`.
 - Attacker profiler: tracks unique IPs, attempted usernames, commands executed, risk score.
 - Credential protection: redaction of raw passwords in all persistence and telemetry.
 
-### Phase 5: MITRE ATT&CK Mapping Engine
+### Phase 5: MITRE ATT&CK Mapping Engine (COMPLETED)
 - Modular evidence-based mapping engine:
   - `T1110.001` (Brute Force / Password Guessing)
   - `T1078` (Valid Accounts / Bait Credential Trigger)
@@ -39,7 +39,7 @@ This document specifies the phased delivery roadmap for the Central Backend & Da
   - `T1046` (Network Service Scanning / Recon)
 - Strict evidence attachment: event IDs, confidence score, mapping rationale.
 
-### Phase 6: REST API Development
+### Phase 6: REST API Development (COMPLETED)
 - `GET /api/health`: system status, DB connectivity, metrics.
 - `GET /api/events` & `GET /api/events/{id}`: filtering by service, severity, event_type, IP, date range; pagination.
 - `GET /api/attackers` & `GET /api/attackers/{id}`: list and detail views.
@@ -47,19 +47,19 @@ This document specifies the phased delivery roadmap for the Central Backend & Da
 - `GET /api/dashboard/stats`, `/timeline`, `/services`: 100% database-derived analytics.
 - CORS middleware configured for frontend dashboard.
 
-### Phase 7: Real-Time Telemetry via WebSockets
+### Phase 7: Real-Time Telemetry via WebSockets (COMPLETED)
 - WebSocket endpoint `/ws/events`.
 - Connection manager with broadcast channels, heartbeats, disconnect tolerance.
 - Event sanitization before streaming.
 
-### Phase 8: Automated Test Suite & Integration Verification
+### Phase 8: Automated Test Suite & Integration Verification (COMPLETED)
 - Comprehensive pytest suite:
   - Unit tests: schema, adapters, MITRE engine, sanitization.
   - Integration tests: database persistence, session transitions, deduplication.
   - API tests: all endpoints, filtering, pagination, auth errors, validation errors.
   - E2E tests: connecting Person 1's `EventForwarder` and `CollectorDaemon` to the running FastAPI backend.
 
-### Phase 9: Final Acceptance & Engineering Report
+### Phase 9: Final Acceptance & Engineering Report (COMPLETED)
 - Verify all acceptance criteria.
 - Produce comprehensive final engineering report.
 
