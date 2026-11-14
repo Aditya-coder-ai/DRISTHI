@@ -17,6 +17,7 @@ def list_sessions(
     db: Session = Depends(get_db),
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Items per page"),
+    limit: Optional[int] = Query(None, ge=1, le=100, description="Alias for page_size"),
     status_filter: Optional[str] = Query(None, alias="status", description="Filter by session status (active, idle, closed, escalated)"),
     source_ip: Optional[str] = Query(None, description="Filter by attacker source IP"),
 ):
@@ -29,15 +30,17 @@ def list_sessions(
 
     query = query.order_by(desc(AttackerSession.last_seen))
 
+    effective_page_size = limit if limit is not None else page_size
     total = query.count()
-    total_pages = ceil(total / page_size) if total > 0 else 1
-    offset = (page - 1) * page_size
-    items = query.offset(offset).limit(page_size).all()
+    total_pages = ceil(total / effective_page_size) if total > 0 else 1
+    offset = (page - 1) * effective_page_size
+    items = query.offset(offset).limit(effective_page_size).all()
 
     return PaginatedSessionsResponse(
         total=total,
         page=page,
-        page_size=page_size,
+        page_size=effective_page_size,
+        limit=effective_page_size,
         total_pages=total_pages,
         items=[it.to_dict() for it in items],
     )

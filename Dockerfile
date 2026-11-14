@@ -31,16 +31,16 @@ RUN mkdir -p \
     var/run \
     services/ftp/uploads
 
-# Expose all deception ports
-# 2222: SSH (Cowrie)
-# 2121: FTP (Isolated VFS)
-# 8080: Web Admin Portal (FastAPI)
+# Expose platform ports
+# 2222: SSH Honeypot (Cowrie)
+# 2121: FTP Honeypot (Isolated VFS)
+# 8080: Web Admin Deception Portal (FastAPI)
 # 5432: PostgreSQL Honeypot
 # 3306: MySQL Honeypot
-EXPOSE 2222 2121 8080 5432 3306
+# 8000: Central Backend & REST API / WebSockets (FastAPI)
+EXPOSE 2222 2121 8080 5432 3306 8000
 
 ENV PYTHONPATH=/app \
     PYTHONUNBUFFERED=1
 
 CMD ["python", "--version"]
-

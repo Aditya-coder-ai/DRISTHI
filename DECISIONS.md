@@ -25,3 +25,23 @@
 - **Decision**: The backend never stores or returns plaintext passwords in API responses or general logs. Only `password_length`, username, and bait-trigger flags are retained.
 - **Consequence**: Robust defense against credential leakage in dashboard telemetry.
 
+## ADR 006: Real-Time Telemetry Streaming via Native WebSockets with REST Fallback
+- **Context**: The frontend dashboard (Person 3) requires live updates as attacks occur without aggressive interval polling.
+- **Decision**: Provide native WebSocket streaming endpoint `/ws/events`. The backend maintains active connections via `WebSocketManager` and pushes `NEW_EVENT` JSON frames on ingestion. A lightweight text-based heartbeat (`ping` $\to$ `pong`) prevents intermediate proxy timeouts. Ingestion and REST endpoints execute synchronously/asynchronously without failing if no WebSocket clients are connected.
+- **Consequence**: Zero-lag real-time dashboard updates with automatic fallback to REST polling (`GET /api/dashboard/stats`).
+
+## ADR 007: Dual Pagination Contract (`page_size` and `limit` Aliasing)
+- **Context**: Different frontend libraries, state managers, and data grids expect either `page_size` or `limit` query parameters and response attributes.
+- **Decision**: REST query parameters accept both `page_size` and `limit`. Paginated responses (`PaginatedEventsResponse`, `PaginatedAttackersResponse`, `PaginatedSessionsResponse`) return both `page_size` and `limit` (synced via Pydantic model validators).
+- **Consequence**: Seamless frontend DX; Person 3 can integrate standard data table components (TanStack Table, Material-UI, AG Grid) without custom parameter transformation.
+
+## ADR 008: Dynamic Environment-Configurable CORS (`FRONTEND_ORIGINS`)
+- **Context**: Person 3 will run React + Vite on `http://localhost:5173` or `http://localhost:3000` during development, but staging/production will host on external domains or IPs.
+- **Decision**: `CORS_ORIGINS` in `backend/app/core/config.py` merges default local development origins with any comma-separated or JSON list provided in `FRONTEND_ORIGINS` or `CORS_ORIGINS` environment variables.
+- **Consequence**: Person 3 can configure their frontend URL in `.env` without modifying backend source code.
+
+## ADR 009: Ingestion Endpoint Aliasing
+- **Context**: Decoys, forwarders, and integration test suites historical call `/api/events`, `/api/ingestion/events`, and `/api/ingest`.
+- **Decision**: Route all three paths to the same unified `ingest_events` controller in `backend/app/api/routes/ingestion.py`.
+- **Consequence**: Complete forward and backward compatibility across all modules and tests.
+

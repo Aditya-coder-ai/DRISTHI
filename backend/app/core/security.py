@@ -43,7 +43,10 @@ def sanitize_credentials(data: Dict[str, Any]) -> Dict[str, Any]:
     for key, value in data.items():
         if isinstance(value, dict):
             sanitized[key] = sanitize_credentials(value)
-        elif isinstance(key, str) and key.lower() in ("password", "passwd", "secret", "user_password"):
+        elif isinstance(key, str) and (
+            any(term in key.lower() for term in ("password", "passwd", "secret", "user_password", "attempted_pass", "creds", "private_key"))
+            and not key.lower().endswith(("_length", "_len", "_hash", "_hint"))
+        ):
             if isinstance(value, str):
                 sanitized["password_length"] = len(value)
             else:

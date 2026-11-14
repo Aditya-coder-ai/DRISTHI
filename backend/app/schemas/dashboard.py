@@ -1,7 +1,8 @@
 """Pydantic schemas for Dashboard Analytics."""
 
-from typing import Dict, List
+from typing import Dict, List, Optional
 from pydantic import BaseModel, Field
+from backend.app.schemas.event import AttackEventResponse
 
 
 class ServiceCountItem(BaseModel):
@@ -28,6 +29,7 @@ class DashboardStatsResponse(BaseModel):
     top_targeted_services: List[ServiceCountItem] = Field(default_factory=list)
     top_usernames: List[UsernameCountItem] = Field(default_factory=list)
     top_commands: List[CommandCountItem] = Field(default_factory=list)
+    recent_events: List[AttackEventResponse] = Field(default_factory=list)
 
 
 class TimelineBucket(BaseModel):
