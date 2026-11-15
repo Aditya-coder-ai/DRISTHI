@@ -1,6 +1,7 @@
 """Global Pytest Fixtures for DRISTHI Central Backend."""
 
 import os
+from datetime import datetime, timezone
 os.environ.setdefault("DISABLE_SQLALCHEMY_CEXT", "1")
 
 import pytest
@@ -59,7 +60,7 @@ def sample_ssh_event():
         "source_port": 52140,
         "username": "finance_admin",
         "protocol": "SSH",
-        "timestamp": "2026-11-14T02:00:00Z",
+        "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "status": "executed",
         "metadata": {
             "command": "cat /etc/passwd",
@@ -79,7 +80,7 @@ def sample_ftp_event():
         "source_port": 52142,
         "username": "backup_user",
         "protocol": "FTP",
-        "timestamp": "2026-11-14T02:05:00Z",
+        "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "status": "success",
         "metadata": {
             "path": "/backups/finance/customer_database.sql",
@@ -100,7 +101,7 @@ def sample_canary_event():
         "source_port": 52144,
         "username": "database_root",
         "protocol": "DATABASE",
-        "timestamp": "2026-11-14T02:10:00Z",
+        "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "status": "detected",
         "metadata": {
             "canary_triggered": True,
