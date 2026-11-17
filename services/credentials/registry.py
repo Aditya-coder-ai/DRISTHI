@@ -12,6 +12,7 @@ import json
 import secrets
 import string
 import time
+import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from threading import Lock
@@ -48,6 +49,8 @@ class BaitCredential:
         last_triggered_at: Optional[str] = None,
         trigger_count: int = 0,
         usage_history: Optional[List[Dict[str, Any]]] = None,
+        tenant_id: Optional[str] = None,
+        honeytoken_id: Optional[str] = None,
     ):
         self.credential_id = credential_id
         self.username = username
@@ -61,6 +64,8 @@ class BaitCredential:
         self.last_triggered_at = last_triggered_at
         self.trigger_count = trigger_count
         self.usage_history = usage_history or []
+        self.tenant_id = tenant_id or settings.DEFAULT_TENANT_ID
+        self.honeytoken_id = honeytoken_id or f"htk-{username}"
 
     def verify_password(self, password_attempt: str) -> bool:
         """Verify password without exposing plaintext in logs."""
@@ -70,6 +75,8 @@ class BaitCredential:
     def to_dict(self, include_raw: bool = False) -> Dict[str, Any]:
         data = {
             "credential_id": self.credential_id,
+            "honeytoken_id": self.honeytoken_id,
+            "tenant_id": self.tenant_id,
             "username": self.username,
             "origin_asset": self.origin_asset,
             "planted_locations": self.planted_locations,
@@ -103,7 +110,7 @@ class CredentialRegistry:
                         data = json.load(f)
                         raw_creds = data.get("credentials", [])
                         for item in raw_creds:
-                            cid = f"cred-{item['username']}"
+                            cid = item.get("credential_id") or f"cred-{item['username']}"
                             cred = BaitCredential(
                                 credential_id=cid,
                                 username=item["username"],
@@ -111,6 +118,8 @@ class CredentialRegistry:
                                 origin_asset=item.get("asset", "unknown"),
                                 description=item.get("description", ""),
                                 planted_locations=[item.get("type", "generic")],
+                                tenant_id=item.get("tenant_id", settings.DEFAULT_TENANT_ID),
+                                honeytoken_id=item.get("honeytoken_id", f"htk-{item['username']}"),
                             )
                             self._credentials[cred.username] = cred
                     logger.info("Loaded %d credentials from %s", len(self._credentials), self.storage_file)
@@ -137,6 +146,8 @@ class CredentialRegistry:
                 origin_asset=asset,
                 planted_locations=locs,
                 description=f"Standard bait credential for {asset}",
+                tenant_id=settings.DEFAULT_TENANT_ID,
+                honeytoken_id=f"htk-{user}",
             )
 
     def register(
@@ -146,6 +157,8 @@ class CredentialRegistry:
         origin_asset: str,
         planted_locations: Optional[List[str]] = None,
         description: str = "",
+        tenant_id: Optional[str] = None,
+        honeytoken_id: Optional[str] = None,
     ) -> BaitCredential:
         """Register a new bait credential."""
         with self._lock:
@@ -157,9 +170,11 @@ class CredentialRegistry:
                 origin_asset=origin_asset,
                 planted_locations=planted_locations,
                 description=description,
+                tenant_id=tenant_id or settings.DEFAULT_TENANT_ID,
+                honeytoken_id=honeytoken_id or f"htk-{username}",
             )
             self._credentials[username] = cred
-            logger.info("Registered new bait credential [%s] for %s", username, origin_asset)
+            logger.info("Registered new bait credential [%s] for %s (tenant: %s)", username, origin_asset, cred.tenant_id)
             return cred
 
     def rotate(self, username: str, new_password: Optional[str] = None) -> Optional[BaitCredential]:
@@ -181,6 +196,8 @@ class CredentialRegistry:
                 origin_asset=existing.origin_asset,
                 planted_locations=existing.planted_locations,
                 description=f"Rotated credential from {existing.credential_id}",
+                tenant_id=existing.tenant_id,
+                honeytoken_id=f"htk-{username}-rot-{int(time.time())}",
             )
             self._credentials[username] = rotated_cred
             logger.info("Rotated credential for user %s", username)
@@ -194,6 +211,7 @@ class CredentialRegistry:
         src_ip: str,
         protocol: str,
         src_port: Optional[int] = None,
+        tenant_id: Optional[str] = None,
     ) -> Tuple[bool, Optional[SecurityEvent], Optional[SecurityEvent]]:
         """Evaluate an interaction against registered bait credentials.
         
@@ -213,6 +231,8 @@ class CredentialRegistry:
             if not matched:
                 return True, None, None
 
+            active_tenant = tenant_id or cred.tenant_id or settings.DEFAULT_TENANT_ID
+
             # Mark credential triggered
             now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
             cred.status = CredentialStatus.TRIGGERED
@@ -224,12 +244,18 @@ class CredentialRegistry:
                 "source_ip": src_ip,
                 "source_port": src_port,
                 "protocol": protocol,
+                "tenant_id": active_tenant,
             }
             cred.usage_history.append(usage_record)
 
             # 1. CANARY_TRIGGERED Event
             canary_event = SecurityEvent(
                 asset_id=target_asset,
+                tenant_id=active_tenant,
+                honeytoken_id=cred.honeytoken_id or cred.credential_id,
+                trigger_type="credential_use",
+                severity="critical",
+                source_service=protocol.lower() if protocol else "unknown",
                 event_type=EventType.CANARY_TRIGGERED.value,
                 source_ip=src_ip,
                 source_port=src_port,
@@ -237,14 +263,29 @@ class CredentialRegistry:
                 protocol=protocol,
                 timestamp=now_iso,
                 status=EventStatus.DETECTED.value,
-                metadata={
+                event_details={
                     "alert_priority": "CRITICAL",
                     "credential_id": cred.credential_id,
+                    "honeytoken_id": cred.honeytoken_id or cred.credential_id,
                     "origin_asset": cred.origin_asset,
                     "target_asset": target_asset,
+                    "trigger_type": "credential_use",
                     "trigger_count": cred.trigger_count,
                     "planted_locations": cred.planted_locations,
                     "description": "Canary bait credential authentication triggered",
+                },
+                metadata={
+                    "alert_priority": "CRITICAL",
+                    "credential_id": cred.credential_id,
+                    "honeytoken_id": cred.honeytoken_id or cred.credential_id,
+                    "origin_asset": cred.origin_asset,
+                    "target_asset": target_asset,
+                    "trigger_type": "credential_use",
+                    "tenant_id": active_tenant,
+                    "trigger_count": cred.trigger_count,
+                    "planted_locations": cred.planted_locations,
+                    "description": "Canary bait credential authentication triggered",
+                    "canary_triggered": True,
                 },
             )
             global_collector.collect(canary_event)
@@ -254,6 +295,11 @@ class CredentialRegistry:
             if cred.origin_asset and cred.origin_asset != target_asset:
                 reuse_event = SecurityEvent(
                     asset_id=target_asset,
+                    tenant_id=active_tenant,
+                    honeytoken_id=cred.honeytoken_id or cred.credential_id,
+                    trigger_type="credential_reuse",
+                    severity="critical",
+                    source_service=protocol.lower() if protocol else "unknown",
                     event_type=EventType.CREDENTIAL_REUSE.value,
                     source_ip=src_ip,
                     source_port=src_port,
@@ -261,13 +307,29 @@ class CredentialRegistry:
                     protocol=protocol,
                     timestamp=now_iso,
                     status=EventStatus.DETECTED.value,
+                    event_details={
+                        "alert_priority": "CRITICAL",
+                        "attack_stage": "Lateral Movement / Cross-Service Credential Reuse",
+                        "credential_id": cred.credential_id,
+                        "honeytoken_id": cred.honeytoken_id or cred.credential_id,
+                        "origin_asset": cred.origin_asset,
+                        "target_asset": target_asset,
+                        "trigger_type": "credential_reuse",
+                        "indicator": f"Bait credential '{username}' seeded on {cred.origin_asset} was reused on {target_asset}",
+                        "usage_sequence_length": len(cred.usage_history),
+                    },
                     metadata={
                         "alert_priority": "CRITICAL",
                         "attack_stage": "Lateral Movement / Cross-Service Credential Reuse",
+                        "credential_id": cred.credential_id,
+                        "honeytoken_id": cred.honeytoken_id or cred.credential_id,
                         "origin_asset": cred.origin_asset,
                         "target_asset": target_asset,
+                        "trigger_type": "credential_reuse",
+                        "tenant_id": active_tenant,
                         "indicator": f"Bait credential '{username}' seeded on {cred.origin_asset} was reused on {target_asset}",
                         "usage_sequence_length": len(cred.usage_history),
+                        "credential_reuse": True,
                     },
                 )
                 global_collector.collect(reuse_event)
@@ -280,6 +342,71 @@ class CredentialRegistry:
                 )
 
             return True, canary_event, reuse_event
+
+    def trigger_honeytoken(
+        self,
+        honeytoken_id: str,
+        asset_id: str,
+        trigger_type: str,
+        source_ip: str,
+        source_port: Optional[int] = None,
+        protocol: str = "CUSTOM",
+        tenant_id: Optional[str] = None,
+        username: Optional[str] = None,
+        severity: str = "high",
+        details: Optional[Dict[str, Any]] = None,
+        event_id: Optional[str] = None,
+    ) -> SecurityEvent:
+        """Explicitly trigger a honeytoken and route through the central event pipeline.
+        
+        Guarantees:
+        - Strict tenant and asset association
+        - Normalized SecurityEvent schema
+        - Plaintext password redaction
+        - Automatic deduplication via global collector
+        """
+        active_tenant = tenant_id or settings.DEFAULT_TENANT_ID
+        now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        
+        # Redact any passwords if present in details
+        clean_details: Dict[str, Any] = {}
+        if details:
+            for k, v in details.items():
+                if "password" in k.lower() or "secret" in k.lower():
+                    clean_details[f"{k}_length"] = len(str(v)) if v is not None else 0
+                else:
+                    clean_details[k] = v
+
+        clean_details.setdefault("honeytoken_id", honeytoken_id)
+        clean_details.setdefault("trigger_type", trigger_type)
+        clean_details.setdefault("asset_id", asset_id)
+        clean_details.setdefault("tenant_id", active_tenant)
+
+        event = SecurityEvent(
+            event_id=event_id or str(uuid.uuid4()),
+            asset_id=asset_id,
+            tenant_id=active_tenant,
+            honeytoken_id=honeytoken_id,
+            trigger_type=trigger_type,
+            severity=severity,
+            source_service=protocol.lower() if protocol else "unknown",
+            event_type=EventType.HONEYTOKEN_TRIGGER.value,
+            source_ip=source_ip,
+            source_port=source_port,
+            username=username,
+            protocol=protocol,
+            timestamp=now_iso,
+            status=EventStatus.DETECTED.value,
+            event_details=clean_details,
+            metadata=dict(clean_details),
+        )
+
+        global_collector.collect(event)
+        logger.warning(
+            "HONEYTOKEN TRIGGERED: [%s] asset=%s tenant=%s type=%s ip=%s",
+            honeytoken_id, asset_id, active_tenant, trigger_type, source_ip
+        )
+        return event
 
     def get_all(self) -> List[Dict[str, Any]]:
         with self._lock:

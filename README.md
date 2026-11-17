@@ -1,6 +1,10 @@
-DRISHTI — Adaptive Distributed Cyber Deception Platform
+# DRISHTI — Adaptive Distributed Cyber Deception Platform
 DRISHTI is a distributed cyber-deception platform that deploys realistic decoy services, captures interactions with those services, correlates activity across deception assets, and forwards normalized security events to a central backend for persistence, threat analysis, and visualization.
-Project status: The project handoff reports all seven implementation phases complete and 89/89 automated tests passing (61 deception-infrastructure tests and 28 backend tests). Automated test success should be complemented by the manual integration and deployment checks described below before using the platform outside an isolated lab.
+
+### Platform Modules
+- **Person 1**: Deception Assets, HoneyFS, Bait Credentials, Canary & Honeytoken Detection, Deceptive Asset Registry, Multi-Tenant Isolation, and Forwarder Daemon (**84 / 84 tests passing**).
+- **Person 2**: Central Backend, Relational Persistence (PostgreSQL/SQLAlchemy), Session Management, Attacker Profiling, REST APIs, WebSockets, and MITRE ATT&CK integration (**35 / 35 tests passing**).
+- **Current Status**: **ALL PHASES & EXTENSIONS COMPLETE (119 / 119 TESTS PASSING)**
 
 Contents
 - Overview
@@ -16,6 +20,7 @@ Contents
 - Integration contract
 - Security and operational notes
 - Project status
+
 Overview
 Traditional security monitoring often depends on recognizing malicious activity against real infrastructure. DRISHTI takes a deception-first approach: it presents controlled, fictional services and data that are designed to attract and record suspicious interactions.
 

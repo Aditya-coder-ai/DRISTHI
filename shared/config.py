@@ -86,6 +86,10 @@ class Settings:
     DAEMON_FLUSH_INTERVAL: float = float(get_env_str("DAEMON_FLUSH_INTERVAL", "2.0"))
     DAEMON_PID_FILE: Path = BASE_DIR / "var" / "run" / "collector_daemon.pid"
 
+    # Multi-Tenant Isolation & Attribution
+    DEFAULT_TENANT_ID: str = get_env_str("DEFAULT_TENANT_ID", get_env_str("TENANT_ID", "tenant-apex-001"))
+    TENANT_ID: str = DEFAULT_TENANT_ID
+
     # Backend Integration (Person 2)
     BACKEND_API_URL: str = get_env_str("BACKEND_API_URL", "http://localhost:8000/api/events")
     BACKEND_API_KEY: Optional[str] = os.environ.get("BACKEND_API_KEY")

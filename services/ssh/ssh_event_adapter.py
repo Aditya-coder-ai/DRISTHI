@@ -42,7 +42,12 @@ class CowrieSSHAdapter:
             return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
     @classmethod
-    def normalize(cls, raw: Dict[str, Any], asset_id: Optional[str] = None) -> Optional[SecurityEvent]:
+    def normalize(
+        cls,
+        raw: Dict[str, Any],
+        asset_id: Optional[str] = None,
+        tenant_id: Optional[str] = None,
+    ) -> Optional[SecurityEvent]:
         """Normalize a raw Cowrie event dictionary into a SecurityEvent.
 
         Returns None if the event is unmapped or purely internal diagnostics.
@@ -94,8 +99,13 @@ class CowrieSSHAdapter:
         elif raw_eventid == "cowrie.session.closed":
             metadata["duration_seconds"] = raw.get("duration")
 
+        active_tenant = tenant_id or settings.DEFAULT_TENANT_ID
+        metadata["tenant_id"] = active_tenant
+
         return SecurityEvent(
             asset_id=asset_id or settings.SSH_ASSET_ID,
+            tenant_id=active_tenant,
+            source_service="ssh",
             event_type=event_type,
             source_ip=src_ip,
             source_port=src_port,
@@ -107,11 +117,16 @@ class CowrieSSHAdapter:
         )
 
     @classmethod
-    def normalize_json_line(cls, line: str, asset_id: Optional[str] = None) -> Optional[SecurityEvent]:
+    def normalize_json_line(
+        cls,
+        line: str,
+        asset_id: Optional[str] = None,
+        tenant_id: Optional[str] = None,
+    ) -> Optional[SecurityEvent]:
         """Parse a JSON string line and normalize it."""
         try:
             data = json.loads(line.strip())
-            return cls.normalize(data, asset_id=asset_id)
+            return cls.normalize(data, asset_id=asset_id, tenant_id=tenant_id)
         except Exception:
             return None
 

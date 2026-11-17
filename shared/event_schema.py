@@ -13,6 +13,8 @@ import uuid
 
 from pydantic import BaseModel, Field, field_validator
 
+from shared.config import settings
+
 
 class ProtocolType(str, Enum):
     SSH = "SSH"
@@ -47,6 +49,7 @@ class EventType(str, Enum):
     CREDENTIAL_REUSE = "credential_reuse"
     DATABASE_ENUMERATION = "database_enumeration"
     SUSPICIOUS_REQUEST = "suspicious_request"
+    HONEYTOKEN_TRIGGER = "honeytoken_trigger"
 
 
 class SecurityEvent(BaseModel):
@@ -88,10 +91,48 @@ class SecurityEvent(BaseModel):
         ...,
         description="Outcome of the interaction (success, failed, executed, etc.)",
     )
+    tenant_id: str = Field(
+        default_factory=lambda: settings.DEFAULT_TENANT_ID,
+        description="Tenant identifier for multi-tenant isolation and tracking",
+    )
+    honeytoken_id: Optional[str] = Field(
+        default=None,
+        description="Identifier of triggered honeytoken or canary credential",
+    )
+    trigger_type: Optional[str] = Field(
+        default=None,
+        description="Classification of trigger (e.g., credential_use, credential_reuse, file_access)",
+    )
+    severity: Optional[str] = Field(
+        default=None,
+        description="Event severity rating (low, medium, high, critical)",
+    )
+    source_service: Optional[str] = Field(
+        default=None,
+        description="Originating deception service name (e.g., ssh, ftp, web, database)",
+    )
+    event_details: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Contextual details of the trigger event",
+    )
     metadata: Dict[str, Any] = Field(
         default_factory=dict,
         description="Contextual metadata preserving service-specific details safely",
     )
+
+    @field_validator("asset_id")
+    @classmethod
+    def validate_asset_id(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("asset_id cannot be empty or blank")
+        return v.strip()
+
+    @field_validator("tenant_id")
+    @classmethod
+    def validate_tenant_id(cls, v: Optional[str]) -> str:
+        if v is not None and not v.strip():
+            raise ValueError("tenant_id cannot be empty or blank")
+        return v.strip() if v else settings.DEFAULT_TENANT_ID
 
     @field_validator("timestamp")
     @classmethod

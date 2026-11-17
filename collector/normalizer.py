@@ -24,6 +24,7 @@ class EventNormalizer:
         raw_event: Dict[str, Any],
         protocol: str = ProtocolType.SSH.value,
         asset_id: Optional[str] = None,
+        tenant_id: Optional[str] = None,
     ) -> Optional[SecurityEvent]:
         """Normalize a raw event dictionary.
 
@@ -31,6 +32,7 @@ class EventNormalizer:
             raw_event: Raw telemetry dictionary from the honeypot/decoy service.
             protocol: Protocol identifier (SSH, FTP, HTTP, DATABASE).
             asset_id: Optional asset identifier override.
+            tenant_id: Optional tenant identifier override.
 
         Returns:
             Validated SecurityEvent instance, or None if skipped/invalid.
@@ -38,16 +40,16 @@ class EventNormalizer:
         protocol_upper = protocol.upper()
 
         if protocol_upper == ProtocolType.SSH.value:
-            return CowrieSSHAdapter.normalize(raw_event, asset_id=asset_id)
+            return CowrieSSHAdapter.normalize(raw_event, asset_id=asset_id, tenant_id=tenant_id)
 
         if protocol_upper == ProtocolType.FTP.value:
-            return FTPEventAdapter.normalize(raw_event, asset_id=asset_id)
+            return FTPEventAdapter.normalize(raw_event, asset_id=asset_id, tenant_id=tenant_id)
 
         if protocol_upper == ProtocolType.HTTP.value:
-            return WebEventAdapter.normalize(raw_event, asset_id=asset_id)
+            return WebEventAdapter.normalize(raw_event, asset_id=asset_id, tenant_id=tenant_id)
 
         if protocol_upper in (ProtocolType.DATABASE.value, "POSTGRESQL", "MYSQL"):
-            return DatabaseEventAdapter.normalize(raw_event, asset_id=asset_id)
+            return DatabaseEventAdapter.normalize(raw_event, asset_id=asset_id, tenant_id=tenant_id)
 
         return None
 

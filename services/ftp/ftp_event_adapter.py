@@ -41,7 +41,12 @@ class FTPEventAdapter:
             return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
     @classmethod
-    def normalize(cls, raw: Dict[str, Any], asset_id: Optional[str] = None) -> Optional[SecurityEvent]:
+    def normalize(
+        cls,
+        raw: Dict[str, Any],
+        asset_id: Optional[str] = None,
+        tenant_id: Optional[str] = None,
+    ) -> Optional[SecurityEvent]:
         """Normalize a raw FTP telemetry event dictionary into a SecurityEvent."""
         raw_eventid = raw.get("eventid")
         if not raw_eventid or raw_eventid not in cls.EVENT_MAP:
@@ -99,8 +104,13 @@ class FTPEventAdapter:
             metadata["duration_seconds"] = raw.get("duration_seconds")
             metadata["commands_processed"] = raw.get("commands_processed", 0)
 
+        active_tenant = tenant_id or settings.DEFAULT_TENANT_ID
+        metadata["tenant_id"] = active_tenant
+
         return SecurityEvent(
-            asset_id=asset_id or "ftp-001",
+            asset_id=asset_id or settings.FTP_ASSET_ID,
+            tenant_id=active_tenant,
+            source_service="ftp",
             event_type=event_type,
             source_ip=src_ip,
             source_port=src_port,
@@ -112,10 +122,15 @@ class FTPEventAdapter:
         )
 
     @classmethod
-    def normalize_json_line(cls, line: str, asset_id: Optional[str] = None) -> Optional[SecurityEvent]:
+    def normalize_json_line(
+        cls,
+        line: str,
+        asset_id: Optional[str] = None,
+        tenant_id: Optional[str] = None,
+    ) -> Optional[SecurityEvent]:
         try:
             data = json.loads(line.strip())
-            return cls.normalize(data, asset_id=asset_id)
+            return cls.normalize(data, asset_id=asset_id, tenant_id=tenant_id)
         except Exception:
             return None
 

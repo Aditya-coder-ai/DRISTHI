@@ -37,7 +37,12 @@ class DatabaseEventAdapter:
             return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
     @classmethod
-    def normalize(cls, raw: Dict[str, Any], asset_id: Optional[str] = None) -> Optional[SecurityEvent]:
+    def normalize(
+        cls,
+        raw: Dict[str, Any],
+        asset_id: Optional[str] = None,
+        tenant_id: Optional[str] = None,
+    ) -> Optional[SecurityEvent]:
         raw_eventid = raw.get("eventid")
         if not raw_eventid or raw_eventid not in cls.EVENT_MAP:
             return None
@@ -77,8 +82,13 @@ class DatabaseEventAdapter:
         elif raw_eventid == "db.session.disconnect":
             metadata["duration_seconds"] = raw.get("duration_seconds", 0)
 
+        active_tenant = tenant_id or settings.DEFAULT_TENANT_ID
+        metadata["tenant_id"] = active_tenant
+
         return SecurityEvent(
             asset_id=asset_id or settings.DB_ASSET_ID,
+            tenant_id=active_tenant,
+            source_service="database",
             event_type=event_type,
             source_ip=src_ip,
             source_port=src_port,
