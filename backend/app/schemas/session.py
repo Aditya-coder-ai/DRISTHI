@@ -9,6 +9,7 @@ class AttackerSessionResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     session_id: str
+    tenant_id: str = "tenant-apex-001"
     attacker_id: Optional[str] = None
     source_ip: str
     first_seen: datetime

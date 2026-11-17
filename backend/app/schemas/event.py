@@ -16,6 +16,7 @@ class SeverityLevel(str, Enum):
 
 class AttackEventBase(BaseModel):
     event_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    tenant_id: str = "tenant-apex-001"
     session_id: Optional[str] = None
     source_ip: str
     source_port: Optional[int] = None

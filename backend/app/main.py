@@ -16,6 +16,7 @@ from backend.app.api.routes import (
     sessions,
     dashboard,
     websocket,
+    tenants,
 )
 from backend.app.core.config import settings
 from backend.app.core.exceptions import DrishtiException
@@ -81,6 +82,7 @@ app.include_router(events.router, prefix=settings.API_V1_PREFIX, tags=["Attack E
 app.include_router(attackers.router, prefix=settings.API_V1_PREFIX, tags=["Attacker Profiles"])
 app.include_router(sessions.router, prefix=settings.API_V1_PREFIX, tags=["Attacker Sessions"])
 app.include_router(dashboard.router, prefix=settings.API_V1_PREFIX, tags=["Dashboard Analytics"])
+app.include_router(tenants.router, prefix=settings.API_V1_PREFIX, tags=["Tenants"])
 app.include_router(websocket.router, tags=["WebSockets"])
 
 

@@ -170,8 +170,12 @@ class Person1SecurityEventAdapter(BaseTelemetryAdapter):
         else:
             ts = datetime.now(timezone.utc)
 
+        # Tenant ID extraction
+        tenant_id = clean_raw.get("tenant_id") or clean_metadata.get("tenant_id") or "tenant-apex-001"
+
         return AttackEventCreate(
             event_id=str(event_id),
+            tenant_id=str(tenant_id),
             session_id=str(session_id) if session_id else None,
             source_ip=str(source_ip),
             source_port=int(source_port) if source_port is not None else None,

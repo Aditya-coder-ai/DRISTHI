@@ -23,24 +23,33 @@ from backend.app.schemas.dashboard import (
 class AnalyticsService:
     """Calculates live analytical aggregations derived entirely from database records."""
 
-    def __init__(self, db: Session):
+    def __init__(self, db: Session, tenant_id: str = "tenant-apex-001"):
         self.db = db
+        self.tenant_id = tenant_id
 
     def get_dashboard_stats(self) -> DashboardStatsResponse:
-        total_events = self.db.query(func.count(AttackEvent.event_id)).scalar() or 0
-        unique_attackers = self.db.query(func.count(func.distinct(AttackEvent.source_ip))).scalar() or 0
+        total_events = self.db.query(func.count(AttackEvent.event_id)).filter(
+            AttackEvent.tenant_id == self.tenant_id
+        ).scalar() or 0
+        unique_attackers = self.db.query(func.count(func.distinct(AttackEvent.source_ip))).filter(
+            AttackEvent.tenant_id == self.tenant_id
+        ).scalar() or 0
         active_sessions = self.db.query(func.count(AttackerSession.session_id)).filter(
-            AttackerSession.status.in_(["active", "escalated"])
+            AttackerSession.tenant_id == self.tenant_id,
+            AttackerSession.status.in_(["active", "escalated"]),
         ).scalar() or 0
 
         # Canary triggers count
         canary_triggers = self.db.query(func.count(AttackEvent.event_id)).filter(
-            AttackEvent.event_type.in_(["canary_triggered", "bait_credential_trigger", "credential_reuse"])
+            AttackEvent.tenant_id == self.tenant_id,
+            AttackEvent.event_type.in_(["canary_triggered", "bait_credential_trigger", "credential_reuse"]),
         ).scalar() or 0
 
         # Severity breakdown
         sev_counts = self.db.query(
             AttackEvent.severity, func.count(AttackEvent.event_id)
+        ).filter(
+            AttackEvent.tenant_id == self.tenant_id
         ).group_by(AttackEvent.severity).all()
         sev_dict = {"low": 0, "medium": 0, "high": 0, "critical": 0}
         for sev, count in sev_counts:
@@ -49,6 +58,8 @@ class AnalyticsService:
         # Top targeted services
         svc_counts = self.db.query(
             AttackEvent.source_service, func.count(AttackEvent.event_id)
+        ).filter(
+            AttackEvent.tenant_id == self.tenant_id
         ).group_by(AttackEvent.source_service).order_by(desc(func.count(AttackEvent.event_id))).limit(10).all()
         top_services = [ServiceCountItem(service=s, count=c) for s, c in svc_counts]
 
@@ -56,13 +67,16 @@ class AnalyticsService:
         user_counts = self.db.query(
             AttackEvent.username, func.count(AttackEvent.event_id)
         ).filter(
+            AttackEvent.tenant_id == self.tenant_id,
             AttackEvent.username.isnot(None),
             AttackEvent.username != "",
         ).group_by(AttackEvent.username).order_by(desc(func.count(AttackEvent.event_id))).limit(10).all()
         top_usernames = [UsernameCountItem(username=u, count=c) for u, c in user_counts]
 
         # Top commands from attacker profiles
-        profiles = self.db.query(AttackerProfile).all()
+        profiles = self.db.query(AttackerProfile).filter(
+            AttackerProfile.tenant_id == self.tenant_id
+        ).all()
         cmd_counter = Counter()
         for p in profiles:
             cmds = p.attempted_commands or []
@@ -72,7 +86,9 @@ class AnalyticsService:
         top_commands = [CommandCountItem(command=cmd, count=cnt) for cmd, cnt in cmd_counter.most_common(10)]
 
         # Recent events for direct dashboard widget display
-        recent_records = self.db.query(AttackEvent).order_by(desc(AttackEvent.timestamp)).limit(10).all()
+        recent_records = self.db.query(AttackEvent).filter(
+            AttackEvent.tenant_id == self.tenant_id
+        ).order_by(desc(AttackEvent.timestamp)).limit(10).all()
         recent_events = [r.to_dict() for r in recent_records]
 
         return DashboardStatsResponse(
@@ -95,7 +111,8 @@ class AnalyticsService:
             AttackEvent.timestamp,
             AttackEvent.severity,
         ).filter(
-            AttackEvent.timestamp >= start_time
+            AttackEvent.tenant_id == self.tenant_id,
+            AttackEvent.timestamp >= start_time,
         ).order_by(AttackEvent.timestamp.asc()).all()
 
         buckets_map: Dict[str, Dict[str, int]] = {}
@@ -133,6 +150,8 @@ class AnalyticsService:
             func.count(AttackEvent.event_id).label("total_events"),
             func.count(func.distinct(AttackEvent.source_ip)).label("unique_attackers"),
             func.max(AttackEvent.timestamp).label("last_event_time"),
+        ).filter(
+            AttackEvent.tenant_id == self.tenant_id
         ).group_by(
             AttackEvent.source_service,
             AttackEvent.asset_id,
@@ -140,7 +159,8 @@ class AnalyticsService:
 
         details = []
         active_sessions_records = self.db.query(AttackerSession.services_accessed).filter(
-            AttackerSession.status.in_(["active", "escalated"])
+            AttackerSession.tenant_id == self.tenant_id,
+            AttackerSession.status.in_(["active", "escalated"]),
         ).all()
 
         for svc, asset, total, unique_ips, last_time in svc_assets:

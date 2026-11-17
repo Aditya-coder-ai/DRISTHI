@@ -30,3 +30,8 @@ class ResourceNotFoundException(DrishtiException):
     """Raised when an entity is not found in database."""
     pass
 
+
+class CrossTenantAccessDeniedException(DrishtiException):
+    """Raised when an operation attempts to access or manipulate data across tenant boundaries."""
+    pass
+

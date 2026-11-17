@@ -30,6 +30,9 @@ class BackendSettings(BaseSettings):
     # Authentication Secret for Ingestion (Shared with Person 1's collector)
     BACKEND_API_KEY: Optional[str] = os.getenv("BACKEND_API_KEY", "")
 
+    # Multi-Tenant Isolation
+    DEFAULT_TENANT_ID: str = os.getenv("DEFAULT_TENANT_ID", os.getenv("TENANT_ID", "tenant-apex-001"))
+
     # Allowed CORS Origins for Dashboard UI
     FRONTEND_ORIGINS: Optional[str] = os.getenv("FRONTEND_ORIGINS", None)
     CORS_ORIGINS: List[str] = [

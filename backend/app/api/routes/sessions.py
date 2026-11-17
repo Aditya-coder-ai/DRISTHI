@@ -3,38 +3,32 @@
 from math import ceil
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import desc
-from sqlalchemy.orm import Session
-from backend.app.database.connection import get_db
-from backend.app.models.session import AttackerSession
+from backend.app.api.deps import get_tenant_data_access
+from backend.app.core.exceptions import CrossTenantAccessDeniedException
 from backend.app.schemas.session import PaginatedSessionsResponse, AttackerSessionResponse
+from backend.app.services.tenant_data_access import TenantDataAccess
 
 router = APIRouter()
 
 
 @router.get("/sessions", response_model=PaginatedSessionsResponse, summary="List attacker interaction sessions")
 def list_sessions(
-    db: Session = Depends(get_db),
+    data_access: TenantDataAccess = Depends(get_tenant_data_access),
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Items per page"),
     limit: Optional[int] = Query(None, ge=1, le=100, description="Alias for page_size"),
     status_filter: Optional[str] = Query(None, alias="status", description="Filter by session status (active, idle, closed, escalated)"),
     source_ip: Optional[str] = Query(None, description="Filter by attacker source IP"),
 ):
-    query = db.query(AttackerSession)
-
-    if status_filter:
-        query = query.filter(AttackerSession.status == status_filter.lower())
-    if source_ip:
-        query = query.filter(AttackerSession.source_ip == source_ip.strip())
-
-    query = query.order_by(desc(AttackerSession.last_seen))
-
     effective_page_size = limit if limit is not None else page_size
-    total = query.count()
+    items, total = data_access.list_sessions(
+        page=page,
+        page_size=effective_page_size,
+        status_filter=status_filter,
+        source_ip=source_ip,
+    )
+
     total_pages = ceil(total / effective_page_size) if total > 0 else 1
-    offset = (page - 1) * effective_page_size
-    items = query.offset(offset).limit(effective_page_size).all()
 
     return PaginatedSessionsResponse(
         total=total,
@@ -47,8 +41,15 @@ def list_sessions(
 
 
 @router.get("/sessions/{session_id}", response_model=AttackerSessionResponse, summary="Get session details")
-def get_session(session_id: str, db: Session = Depends(get_db)):
-    session = db.query(AttackerSession).filter(AttackerSession.session_id == session_id).first()
+def get_session(session_id: str, data_access: TenantDataAccess = Depends(get_tenant_data_access)):
+    try:
+        session = data_access.get_session(session_id)
+    except CrossTenantAccessDeniedException as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(exc),
+        )
+
     if not session:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

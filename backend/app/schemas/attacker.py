@@ -9,6 +9,7 @@ class AttackerProfileResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     attacker_id: str
+    tenant_id: str = "tenant-apex-001"
     source_ip: str
     first_seen: datetime
     last_seen: datetime

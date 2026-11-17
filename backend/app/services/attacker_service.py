@@ -22,15 +22,17 @@ class AttackerService:
         self.db = db
 
     def update_attacker_profile(self, event: AttackEventCreate) -> AttackerProfile:
+        tenant_id = getattr(event, "tenant_id", "tenant-apex-001") or "tenant-apex-001"
         profile = self.db.query(AttackerProfile).filter(
-            AttackerProfile.source_ip == event.source_ip
+            AttackerProfile.tenant_id == tenant_id,
+            AttackerProfile.source_ip == event.source_ip,
         ).first()
 
         command = (event.activity or {}).get("command") or (event.metadata or {}).get("command")
         event_time = ensure_utc(event.timestamp)
 
         if not profile:
-            attacker_id = f"atk-{event.source_ip.replace('.', '-').replace(':', '-')}"
+            attacker_id = f"atk-{tenant_id}-{event.source_ip.replace('.', '-').replace(':', '-')}"
             usernames = [event.username] if event.username else []
             commands = [command] if command else []
             services = [event.source_service] if event.source_service else []
@@ -38,6 +40,7 @@ class AttackerService:
 
             profile = AttackerProfile(
                 attacker_id=attacker_id,
+                tenant_id=tenant_id,
                 source_ip=event.source_ip,
                 first_seen=event_time,
                 last_seen=event_time,

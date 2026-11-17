@@ -1,8 +1,9 @@
 from backend.app.database.base import Base
+from backend.app.models.tenant import Tenant
 from backend.app.models.event import AttackEvent
 from backend.app.models.session import AttackerSession
 from backend.app.models.attacker import AttackerProfile
 from backend.app.models.mitre import MitreMapping
 
-__all__ = ["Base", "AttackEvent", "AttackerSession", "AttackerProfile", "MitreMapping"]
+__all__ = ["Base", "Tenant", "AttackEvent", "AttackerSession", "AttackerProfile", "MitreMapping"]
 

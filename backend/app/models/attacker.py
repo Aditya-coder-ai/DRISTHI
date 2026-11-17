@@ -2,7 +2,7 @@
 
 from datetime import datetime, timezone
 from typing import Any, Dict, List
-from sqlalchemy import Column, String, Integer, Float, DateTime, Index, JSON
+from sqlalchemy import Column, String, Integer, Float, DateTime, Index, JSON, UniqueConstraint
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.orm import relationship
 from backend.app.database.base import Base
@@ -14,7 +14,8 @@ class AttackerProfile(Base):
     __tablename__ = "attacker_profiles"
 
     attacker_id = Column(String(64), primary_key=True, index=True)
-    source_ip = Column(String(64), unique=True, nullable=False, index=True)
+    tenant_id = Column(String(64), nullable=False, default="tenant-apex-001", index=True)
+    source_ip = Column(String(64), nullable=False, index=True)
     first_seen = Column(DateTime(timezone=True), nullable=False)
     last_seen = Column(DateTime(timezone=True), nullable=False, index=True)
     total_events = Column(Integer, nullable=False, default=0)
@@ -30,9 +31,15 @@ class AttackerProfile(Base):
     # Relationships
     sessions = relationship("AttackerSession", back_populates="attacker")
 
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "source_ip", name="uq_attacker_tenant_source_ip"),
+        Index("ix_attacker_profiles_tenant_last_seen", "tenant_id", "last_seen"),
+    )
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "attacker_id": self.attacker_id,
+            "tenant_id": self.tenant_id,
             "source_ip": self.source_ip,
             "first_seen": self.first_seen.isoformat() if self.first_seen else None,
             "last_seen": self.last_seen.isoformat() if self.last_seen else None,

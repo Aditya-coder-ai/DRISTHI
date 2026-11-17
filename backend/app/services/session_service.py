@@ -20,18 +20,21 @@ class SessionService:
         """Finds an existing active session or initializes a new one based on event telemetry."""
         now = ensure_utc(event.timestamp)
         timeout_threshold = now - timedelta(seconds=settings.SESSION_IDLE_TIMEOUT_SECONDS)
+        tenant_id = getattr(event, "tenant_id", "tenant-apex-001") or "tenant-apex-001"
 
         session: Optional[AttackerSession] = None
 
         # 1. Check if event specifically supplies an existing session ID
         if event.session_id:
             session = self.db.query(AttackerSession).filter(
-                AttackerSession.session_id == event.session_id
+                AttackerSession.session_id == event.session_id,
+                AttackerSession.tenant_id == tenant_id,
             ).first()
 
         # 2. Heuristic grouping: Look for active session matching source_ip within idle threshold
         if not session:
             candidates = self.db.query(AttackerSession).filter(
+                AttackerSession.tenant_id == tenant_id,
                 AttackerSession.source_ip == event.source_ip,
                 AttackerSession.status.in_(["active", "escalated"]),
             ).order_by(AttackerSession.last_seen.desc()).all()
@@ -76,6 +79,7 @@ class SessionService:
 
         session = AttackerSession(
             session_id=new_session_id,
+            tenant_id=tenant_id,
             attacker_id=attacker_id,
             source_ip=event.source_ip,
             first_seen=now,

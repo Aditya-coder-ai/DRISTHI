@@ -14,6 +14,7 @@ class AttackerSession(Base):
     __tablename__ = "attacker_sessions"
 
     session_id = Column(String(64), primary_key=True, index=True)
+    tenant_id = Column(String(64), nullable=False, default="tenant-apex-001", index=True)
     attacker_id = Column(String(64), ForeignKey("attacker_profiles.attacker_id", ondelete="SET NULL"), nullable=True, index=True)
     source_ip = Column(String(64), nullable=False, index=True)
     first_seen = Column(DateTime(timezone=True), nullable=False)
@@ -28,9 +29,15 @@ class AttackerSession(Base):
     attacker = relationship("AttackerProfile", back_populates="sessions")
     events = relationship("AttackEvent", back_populates="session")
 
+    __table_args__ = (
+        Index("ix_sessions_tenant_ip", "tenant_id", "source_ip"),
+        Index("ix_sessions_tenant_last_seen", "tenant_id", "last_seen"),
+    )
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "session_id": self.session_id,
+            "tenant_id": self.tenant_id,
             "attacker_id": self.attacker_id,
             "source_ip": self.source_ip,
             "first_seen": self.first_seen.isoformat() if self.first_seen else None,

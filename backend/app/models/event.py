@@ -15,6 +15,7 @@ class AttackEvent(Base):
     __tablename__ = "attack_events"
 
     event_id = Column(String(64), primary_key=True, index=True)
+    tenant_id = Column(String(64), nullable=False, default="tenant-apex-001", index=True)
     session_id = Column(String(64), ForeignKey("attacker_sessions.session_id", ondelete="SET NULL"), nullable=True, index=True)
     source_ip = Column(String(64), nullable=False, index=True)
     source_port = Column(Integer, nullable=True)
@@ -36,11 +37,13 @@ class AttackEvent(Base):
     __table_args__ = (
         Index("ix_events_service_severity_time", "source_service", "severity", "timestamp"),
         Index("ix_events_source_ip_timestamp", "source_ip", "timestamp"),
+        Index("ix_events_tenant_time", "tenant_id", "timestamp"),
     )
 
     def to_dict(self) -> Dict[str, Any]:
         return {
             "event_id": self.event_id,
+            "tenant_id": self.tenant_id,
             "session_id": self.session_id,
             "source_ip": self.source_ip,
             "source_port": self.source_port,

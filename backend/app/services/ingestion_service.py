@@ -71,6 +71,7 @@ class IngestionService:
                 # 5. Persist Attack Event
                 event_model = AttackEvent(
                     event_id=event_create.event_id,
+                    tenant_id=event_create.tenant_id,
                     session_id=event_create.session_id,
                     source_ip=event_create.source_ip,
                     source_port=event_create.source_port,
@@ -107,6 +108,7 @@ class IngestionService:
                     "type": "NEW_EVENT",
                     "data": {
                         "event_id": event_create.event_id,
+                        "tenant_id": event_create.tenant_id,
                         "session_id": event_create.session_id,
                         "source_service": event_create.source_service,
                         "asset_id": event_create.asset_id,
