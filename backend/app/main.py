@@ -19,6 +19,7 @@ from backend.app.api.routes import (
     tenants,
     assets,
     honeytokens,
+    deployments,
 )
 from backend.app.core.config import settings
 from backend.app.core.exceptions import DrishtiException
@@ -87,6 +88,7 @@ app.include_router(dashboard.router, prefix=settings.API_V1_PREFIX, tags=["Dashb
 app.include_router(tenants.router, prefix=settings.API_V1_PREFIX, tags=["Tenants"])
 app.include_router(assets.router, prefix=settings.API_V1_PREFIX, tags=["Deceptive Assets"])
 app.include_router(honeytokens.router, prefix=settings.API_V1_PREFIX, tags=["Honeytokens"])
+app.include_router(deployments.router, prefix=settings.API_V1_PREFIX, tags=["Deployments"])
 app.include_router(websocket.router, tags=["WebSockets"])
 
 

@@ -20,10 +20,17 @@ from sqlalchemy.orm import Session
 from backend.app.core.exceptions import CrossTenantAccessDeniedException
 from backend.app.models.asset import DeceptiveAsset
 from backend.app.models.attacker import AttackerProfile
+from backend.app.models.deployment import Deployment
 from backend.app.models.event import AttackEvent
 from backend.app.models.honeytoken import Honeytoken
 from backend.app.models.session import AttackerSession
 from backend.app.schemas.asset import AssetCreate, AssetUpdate, AssetStatus, VALID_STATUS_TRANSITIONS
+from backend.app.schemas.deployment import (
+    DeploymentRegisterRequest,
+    DeploymentUpdate,
+    DeploymentStatus,
+    VALID_DEPLOYMENT_STATUS_TRANSITIONS,
+)
 from backend.app.schemas.honeytoken import (
     HoneytokenCreate,
     HoneytokenUpdate,
@@ -422,3 +429,188 @@ class TenantDataAccess:
 
         self.db.commit()
         return True
+
+    # --------------------------------------------------------------------------
+    # Deployment Registration Operations
+    # --------------------------------------------------------------------------
+
+    def get_deployment(self, deployment_id: str) -> Optional[Deployment]:
+        """Fetch a deployment by ID, rejecting cross-tenant attempts."""
+        clean_id = deployment_id.strip()
+        deployment = self.db.query(Deployment).filter(Deployment.deployment_id == clean_id).first()
+        if not deployment:
+            return None
+        if deployment.tenant_id != self.tenant_id:
+            raise CrossTenantAccessDeniedException(
+                f"Access denied: deployment '{clean_id}' belongs to tenant '{deployment.tenant_id}', not '{self.tenant_id}'"
+            )
+        return deployment
+
+    def list_deployments(
+        self,
+        page: int = 1,
+        page_size: int = 20,
+        asset_type: Optional[str] = None,
+        status_filter: Optional[str] = None,
+        environment: Optional[str] = None,
+        asset_id: Optional[str] = None,
+    ) -> Tuple[List[Deployment], int]:
+        """Query deployments strictly constrained to self.tenant_id."""
+        query = self.db.query(Deployment).filter(Deployment.tenant_id == self.tenant_id)
+
+        if asset_type:
+            query = query.filter(Deployment.asset_type == asset_type.strip().lower())
+        if status_filter:
+            query = query.filter(Deployment.status == status_filter.strip().lower())
+        if environment:
+            query = query.filter(Deployment.environment == environment.strip().lower())
+        if asset_id:
+            query = query.filter(Deployment.asset_id == asset_id.strip())
+
+        query = query.order_by(desc(Deployment.registered_at))
+        total = query.count()
+        offset = (page - 1) * page_size
+        items = query.offset(offset).limit(page_size).all()
+        return items, total
+
+    def register_deployment(self, payload: DeploymentRegisterRequest) -> Deployment:
+        """Register a new deployment or update an existing one (upsert-safe).
+
+        Validates that the referenced asset_id exists and belongs to the current tenant.
+        """
+        clean_deploy_id = payload.deployment_id.strip()
+        clean_asset_id = payload.asset_id.strip()
+
+        # Verify the referenced asset exists and belongs to this tenant
+        asset = self.get_asset(clean_asset_id)
+        if not asset:
+            raise ValueError(f"Asset '{clean_asset_id}' not found in tenant '{self.tenant_id}'")
+
+        # Check if deployment already exists (upsert behavior)
+        existing = self.db.query(Deployment).filter(
+            Deployment.deployment_id == clean_deploy_id
+        ).first()
+
+        now = datetime.now(timezone.utc)
+
+        if existing:
+            # Enforce tenant isolation on existing deployment
+            if existing.tenant_id != self.tenant_id:
+                raise CrossTenantAccessDeniedException(
+                    f"Deployment '{clean_deploy_id}' is already registered under another tenant"
+                )
+            # Update existing deployment (re-registration / upsert)
+            existing.asset_id = clean_asset_id
+            existing.asset_type = payload.asset_type.strip().lower()
+            existing.environment = payload.environment.strip().lower() if payload.environment else existing.environment
+            existing.version = payload.version.strip() if payload.version else existing.version
+            existing.hostname = payload.hostname.strip() if payload.hostname else existing.hostname
+            existing.ip_address = payload.ip_address.strip() if payload.ip_address else existing.ip_address
+            existing.port = payload.port if payload.port is not None else existing.port
+            existing.deploy_metadata = payload.deploy_metadata or existing.deploy_metadata
+            existing.last_heartbeat_at = now
+            existing.updated_at = now
+            self.db.commit()
+            self.db.refresh(existing)
+            return existing
+
+        # Create new deployment
+        deployment = Deployment(
+            deployment_id=clean_deploy_id,
+            asset_id=clean_asset_id,
+            tenant_id=self.tenant_id,
+            asset_type=payload.asset_type.strip().lower(),
+            environment=payload.environment.strip().lower() if payload.environment else "production",
+            version=payload.version.strip() if payload.version else None,
+            hostname=payload.hostname.strip() if payload.hostname else None,
+            ip_address=payload.ip_address.strip() if payload.ip_address else None,
+            port=payload.port,
+            status=DeploymentStatus.REGISTERED.value,
+            registered_at=now,
+            last_heartbeat_at=None,
+            deploy_metadata=payload.deploy_metadata or {},
+            created_at=now,
+            updated_at=now,
+        )
+        self.db.add(deployment)
+        self.db.commit()
+        self.db.refresh(deployment)
+        return deployment
+
+    def update_deployment(self, deployment_id: str, payload: DeploymentUpdate) -> Optional[Deployment]:
+        """Update an existing deployment with tenant ownership and status transition validation."""
+        deployment = self.get_deployment(deployment_id)
+        if not deployment:
+            return None
+
+        # Validate status transitions
+        if payload.status is not None:
+            new_status_str = payload.status.strip().lower()
+            try:
+                current_status = DeploymentStatus(deployment.status)
+                new_status = DeploymentStatus(new_status_str)
+                allowed = VALID_DEPLOYMENT_STATUS_TRANSITIONS.get(current_status, set())
+                if new_status != current_status and new_status not in allowed:
+                    raise ValueError(
+                        f"Invalid status transition from '{deployment.status}' to '{new_status_str}'. "
+                        f"Allowed transitions: {[s.value for s in allowed]}"
+                    )
+            except ValueError as ve:
+                if "Invalid status transition" in str(ve):
+                    raise
+                pass
+            deployment.status = new_status_str
+
+        if payload.environment is not None:
+            deployment.environment = payload.environment.strip().lower()
+        if payload.version is not None:
+            deployment.version = payload.version.strip() if payload.version else None
+        if payload.hostname is not None:
+            deployment.hostname = payload.hostname.strip() if payload.hostname else None
+        if payload.ip_address is not None:
+            deployment.ip_address = payload.ip_address.strip() if payload.ip_address else None
+        if payload.port is not None:
+            deployment.port = payload.port
+        if payload.deploy_metadata is not None:
+            deployment.deploy_metadata = payload.deploy_metadata
+
+        deployment.updated_at = datetime.now(timezone.utc)
+        self.db.commit()
+        self.db.refresh(deployment)
+        return deployment
+
+    def record_heartbeat(self, deployment_id: str, status: Optional[str] = None, version: Optional[str] = None, metadata: Optional[dict] = None) -> Optional[Deployment]:
+        """Record a heartbeat for a deployment, updating last_heartbeat_at and optionally status/version."""
+        deployment = self.get_deployment(deployment_id)
+        if not deployment:
+            return None
+
+        now = datetime.now(timezone.utc)
+        deployment.last_heartbeat_at = now
+        deployment.updated_at = now
+
+        if status is not None:
+            new_status_str = status.strip().lower()
+            try:
+                current_status = DeploymentStatus(deployment.status)
+                new_status = DeploymentStatus(new_status_str)
+                allowed = VALID_DEPLOYMENT_STATUS_TRANSITIONS.get(current_status, set())
+                if new_status != current_status and new_status not in allowed:
+                    raise ValueError(
+                        f"Invalid status transition from '{deployment.status}' to '{new_status_str}'. "
+                        f"Allowed transitions: {[s.value for s in allowed]}"
+                    )
+            except ValueError as ve:
+                if "Invalid status transition" in str(ve):
+                    raise
+                pass
+            deployment.status = new_status_str
+
+        if version is not None:
+            deployment.version = version.strip()
+        if metadata is not None:
+            deployment.deploy_metadata = metadata
+
+        self.db.commit()
+        self.db.refresh(deployment)
+        return deployment

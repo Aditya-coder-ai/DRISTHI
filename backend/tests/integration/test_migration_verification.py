@@ -110,10 +110,21 @@ def test_alembic_multi_tenant_migration_clean_backfill():
             assert "htk-ssh-backup-001" in token_map
             assert token_map["htk-ssh-backup-001"] == ("tenant-apex-001", "ssh-001", "active")
 
+            # Verify deployments table and seeded deployments from 0005 migration
+            deploy_rows = conn.execute(text("SELECT deployment_id, tenant_id, asset_id, status FROM deployments ORDER BY deployment_id")).fetchall()
+            assert len(deploy_rows) >= 5
+            deploy_map = {row[0]: (row[1], row[2], row[3]) for row in deploy_rows}
+            assert "deploy-ssh-prod-01" in deploy_map
+            assert deploy_map["deploy-ssh-prod-01"] == ("tenant-apex-001", "ssh-001", "active")
+            assert "deploy-ftp-prod-01" in deploy_map
+            assert "deploy-web-prod-01" in deploy_map
+            assert "deploy-db-prod-01" in deploy_map
+            assert "deploy-token-aws-01" in deploy_map
+
         # 4. Downgrade back to 0001_initial_schema to verify clean reversal
         command.downgrade(alembic_cfg, "0001_initial_schema")
 
-        # Verify tenants, deceptive_assets, and honeytokens tables dropped
+        # Verify tenants, deceptive_assets, honeytokens, and deployments tables dropped
         with engine.connect() as conn:
             tenants_count = conn.execute(text("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='tenants'")).scalar()
             assert tenants_count == 0
@@ -121,6 +132,8 @@ def test_alembic_multi_tenant_migration_clean_backfill():
             assert assets_count == 0
             tokens_count = conn.execute(text("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='honeytokens'")).scalar()
             assert tokens_count == 0
+            deployments_count = conn.execute(text("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='deployments'")).scalar()
+            assert deployments_count == 0
 
     finally:
         shutil.rmtree(temp_dir, ignore_errors=True)

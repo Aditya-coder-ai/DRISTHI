@@ -1,6 +1,7 @@
 from backend.app.database.base import Base
 from backend.app.models.tenant import Tenant
 from backend.app.models.asset import DeceptiveAsset
+from backend.app.models.deployment import Deployment
 from backend.app.models.honeytoken import Honeytoken
 from backend.app.models.event import AttackEvent
 from backend.app.models.session import AttackerSession
@@ -11,6 +12,7 @@ __all__ = [
     "Base",
     "Tenant",
     "DeceptiveAsset",
+    "Deployment",
     "Honeytoken",
     "AttackEvent",
     "AttackerSession",

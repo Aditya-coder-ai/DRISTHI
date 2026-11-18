@@ -50,6 +50,7 @@ def init_db() -> None:
     # Import all models so Base has registered them
     import backend.app.models.tenant
     import backend.app.models.asset
+    import backend.app.models.deployment
     import backend.app.models.honeytoken
     import backend.app.models.event
     import backend.app.models.session

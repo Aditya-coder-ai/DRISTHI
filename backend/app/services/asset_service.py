@@ -5,7 +5,9 @@ from typing import List, Optional
 from sqlalchemy.orm import Session
 
 from backend.app.models.asset import DeceptiveAsset
+from backend.app.models.deployment import Deployment
 from backend.app.schemas.asset import AssetCreate, AssetStatus, AssetType
+from backend.app.schemas.deployment import DeploymentStatus
 
 
 DEFAULT_HONEYPOTS = [
@@ -127,6 +129,42 @@ class AssetService:
             self.db.commit()
             for a in seeded:
                 self.db.refresh(a)
+
+        # Idempotently seed corresponding default deployments
+        seeded_deployments = []
+        for item in DEFAULT_HONEYPOTS:
+            dep_id = item.get("deployment_id")
+            if dep_id:
+                existing_dep = self.db.query(Deployment).filter(
+                    Deployment.deployment_id == dep_id,
+                    Deployment.tenant_id == clean_tenant,
+                ).first()
+                if not existing_dep:
+                    meta = item.get("config_metadata") or {}
+                    dep = Deployment(
+                        deployment_id=dep_id,
+                        asset_id=item["asset_id"],
+                        tenant_id=clean_tenant,
+                        asset_type=item["asset_type"],
+                        environment=item["environment"],
+                        version="1.0.0",
+                        hostname=meta.get("hostname"),
+                        ip_address=None,
+                        port=meta.get("port") or meta.get("port_pg"),
+                        status=DeploymentStatus.ACTIVE.value,
+                        registered_at=now,
+                        last_heartbeat_at=now,
+                        deploy_metadata=meta,
+                        created_at=now,
+                        updated_at=now,
+                    )
+                    self.db.add(dep)
+                    seeded_deployments.append(dep)
+
+        if seeded_deployments:
+            self.db.commit()
+            for d in seeded_deployments:
+                self.db.refresh(d)
 
         return seeded
 
