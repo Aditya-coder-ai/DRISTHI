@@ -121,10 +121,14 @@ def test_alembic_multi_tenant_migration_clean_backfill():
             assert "deploy-db-prod-01" in deploy_map
             assert "deploy-token-aws-01" in deploy_map
 
+            # Verify integration_configs table from 0006 migration
+            intg_count = conn.execute(text("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='integration_configs'")).scalar()
+            assert intg_count == 1
+
         # 4. Downgrade back to 0001_initial_schema to verify clean reversal
         command.downgrade(alembic_cfg, "0001_initial_schema")
 
-        # Verify tenants, deceptive_assets, honeytokens, and deployments tables dropped
+        # Verify tenants, deceptive_assets, honeytokens, deployments, and integration_configs tables dropped
         with engine.connect() as conn:
             tenants_count = conn.execute(text("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='tenants'")).scalar()
             assert tenants_count == 0
@@ -134,6 +138,8 @@ def test_alembic_multi_tenant_migration_clean_backfill():
             assert tokens_count == 0
             deployments_count = conn.execute(text("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='deployments'")).scalar()
             assert deployments_count == 0
+            intg_dropped_count = conn.execute(text("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='integration_configs'")).scalar()
+            assert intg_dropped_count == 0
 
     finally:
         shutil.rmtree(temp_dir, ignore_errors=True)

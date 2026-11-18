@@ -12,6 +12,7 @@ Guarantees:
 """
 
 from datetime import datetime, timezone
+import uuid
 from math import ceil
 from typing import List, Optional, Tuple
 from sqlalchemy import desc, asc
@@ -23,6 +24,7 @@ from backend.app.models.attacker import AttackerProfile
 from backend.app.models.deployment import Deployment
 from backend.app.models.event import AttackEvent
 from backend.app.models.honeytoken import Honeytoken
+from backend.app.models.integration import IntegrationConfig
 from backend.app.models.session import AttackerSession
 from backend.app.schemas.asset import AssetCreate, AssetUpdate, AssetStatus, VALID_STATUS_TRANSITIONS
 from backend.app.schemas.deployment import (
@@ -36,6 +38,13 @@ from backend.app.schemas.honeytoken import (
     HoneytokenUpdate,
     HoneytokenStatus,
     VALID_HONEYTOKEN_STATUS_TRANSITIONS,
+)
+from backend.app.schemas.integration import (
+    IntegrationCreate,
+    IntegrationUpdate,
+    IntegrationStatus,
+    mask_secret,
+    hash_secret,
 )
 
 
@@ -614,3 +623,252 @@ class TenantDataAccess:
         self.db.commit()
         self.db.refresh(deployment)
         return deployment
+
+    # --------------------------------------------------------------------------
+    # Integration Configuration Operations
+    # --------------------------------------------------------------------------
+
+    def get_integration(self, integration_id: str) -> Optional[IntegrationConfig]:
+        """Fetch an integration configuration by ID, rejecting cross-tenant attempts."""
+        clean_id = integration_id.strip()
+        integration = self.db.query(IntegrationConfig).filter(
+            IntegrationConfig.integration_id == clean_id
+        ).first()
+        if not integration:
+            return None
+        if integration.tenant_id != self.tenant_id:
+            raise CrossTenantAccessDeniedException(
+                f"Access denied: integration '{clean_id}' belongs to tenant '{integration.tenant_id}', not '{self.tenant_id}'"
+            )
+        return integration
+
+    def list_integrations(
+        self,
+        page: int = 1,
+        page_size: int = 20,
+        integration_type: Optional[str] = None,
+        enabled: Optional[bool] = None,
+        status_filter: Optional[str] = None,
+        search: Optional[str] = None,
+    ) -> Tuple[List[IntegrationConfig], int]:
+        """Query integration configurations strictly constrained to self.tenant_id."""
+        query = self.db.query(IntegrationConfig).filter(IntegrationConfig.tenant_id == self.tenant_id)
+
+        if integration_type:
+            query = query.filter(IntegrationConfig.integration_type == integration_type.strip().lower())
+        if enabled is not None:
+            query = query.filter(IntegrationConfig.enabled == enabled)
+        if status_filter:
+            query = query.filter(IntegrationConfig.status == status_filter.strip().lower())
+        if search:
+            term = f"%{search.strip()}%"
+            query = query.filter(
+                (IntegrationConfig.name.ilike(term)) | (IntegrationConfig.integration_id.ilike(term))
+            )
+
+        query = query.order_by(desc(IntegrationConfig.created_at))
+        total = query.count()
+        offset = (page - 1) * page_size
+        items = query.offset(offset).limit(page_size).all()
+        return items, total
+
+    def create_integration(self, payload: IntegrationCreate) -> IntegrationConfig:
+        """Create a new integration configuration with secret masking and tenant isolation."""
+        clean_id = payload.integration_id.strip() if payload.integration_id else f"intg-{payload.integration_type[:4]}-{uuid.uuid4().hex[:8]}"
+
+        existing = self.db.query(IntegrationConfig).filter(
+            IntegrationConfig.integration_id == clean_id
+        ).first()
+        if existing:
+            if existing.tenant_id != self.tenant_id:
+                raise CrossTenantAccessDeniedException(
+                    f"Integration ID '{clean_id}' already registered under another tenant"
+                )
+            raise ValueError(f"Integration with ID '{clean_id}' already exists in tenant '{self.tenant_id}'")
+
+        now = datetime.now(timezone.utc)
+        secret_masked = None
+        secret_hash_val = None
+        secret_storage_val = None
+
+        if payload.secret:
+            secret_masked = mask_secret(payload.secret)
+            secret_hash_val = hash_secret(payload.secret)
+            secret_storage_val = f"enc:v1:{secret_hash_val[:16]}:{uuid.uuid4().hex[:8]}"
+
+        # Perform initial safe configuration validation
+        is_valid, validation_details = self._validate_config(
+            payload.integration_type,
+            payload.config_metadata,
+            has_secret=bool(payload.secret),
+        )
+        initial_status = IntegrationStatus.VERIFIED.value if is_valid else (
+            IntegrationStatus.CONFIGURED.value if payload.enabled else IntegrationStatus.DISABLED.value
+        )
+
+        integration = IntegrationConfig(
+            integration_id=clean_id,
+            tenant_id=self.tenant_id,
+            name=payload.name.strip(),
+            integration_type=payload.integration_type.strip().lower(),
+            enabled=payload.enabled,
+            status=initial_status,
+            config_metadata=payload.config_metadata,
+            secret_masked=secret_masked,
+            secret_hash=secret_hash_val,
+            secret_storage=secret_storage_val,
+            last_validated_at=now if is_valid else None,
+            validation_details=validation_details,
+            created_at=now,
+            updated_at=now,
+        )
+        self.db.add(integration)
+        self.db.commit()
+        self.db.refresh(integration)
+        return integration
+
+    def update_integration(self, integration_id: str, payload: IntegrationUpdate) -> Optional[IntegrationConfig]:
+        """Update an existing integration with tenant verification and optional secret rotation/revocation."""
+        integration = self.get_integration(integration_id)
+        if not integration:
+            return None
+
+        now = datetime.now(timezone.utc)
+
+        if payload.name is not None:
+            integration.name = payload.name.strip()
+        if payload.config_metadata is not None:
+            integration.config_metadata = payload.config_metadata
+        if payload.enabled is not None:
+            integration.enabled = payload.enabled
+            if not payload.enabled:
+                integration.status = IntegrationStatus.DISABLED.value
+            elif integration.status == IntegrationStatus.DISABLED.value:
+                integration.status = IntegrationStatus.CONFIGURED.value
+        if payload.status is not None:
+            integration.status = payload.status.strip().lower()
+
+        # Handle secret rotation or revocation
+        if payload.revoke_secret:
+            integration.secret_masked = None
+            integration.secret_hash = None
+            integration.secret_storage = None
+        elif payload.secret:
+            integration.secret_masked = mask_secret(payload.secret)
+            integration.secret_hash = hash_secret(payload.secret)
+            integration.secret_storage = f"enc:v1:{integration.secret_hash[:16]}:{uuid.uuid4().hex[:8]}"
+
+        integration.updated_at = now
+        self.db.commit()
+        self.db.refresh(integration)
+        return integration
+
+    def toggle_integration(self, integration_id: str, enabled: Optional[bool] = None) -> Optional[IntegrationConfig]:
+        """Enable or disable an integration configuration."""
+        integration = self.get_integration(integration_id)
+        if not integration:
+            return None
+
+        new_enabled = enabled if enabled is not None else not integration.enabled
+        integration.enabled = new_enabled
+        if not new_enabled:
+            integration.status = IntegrationStatus.DISABLED.value
+        elif integration.status == IntegrationStatus.DISABLED.value:
+            integration.status = IntegrationStatus.CONFIGURED.value
+
+        integration.updated_at = datetime.now(timezone.utc)
+        self.db.commit()
+        self.db.refresh(integration)
+        return integration
+
+    def delete_integration(self, integration_id: str) -> bool:
+        """Permanently remove an integration configuration with tenant ownership verification."""
+        integration = self.get_integration(integration_id)
+        if not integration:
+            return False
+
+        self.db.delete(integration)
+        self.db.commit()
+        return True
+
+    def validate_integration(self, integration_id: str) -> Tuple[bool, dict]:
+        """Runs safe syntax and required fields validation on an integration without unauthorized external calls."""
+        integration = self.get_integration(integration_id)
+        if not integration:
+            raise ValueError(f"Integration '{integration_id}' not found in tenant '{self.tenant_id}'")
+
+        is_valid, validation_details = self._validate_config(
+            integration.integration_type,
+            integration.config_metadata or {},
+            has_secret=bool(integration.secret_hash or integration.secret_storage),
+        )
+
+        now = datetime.now(timezone.utc)
+        integration.last_validated_at = now
+        integration.validation_details = validation_details
+        integration.status = IntegrationStatus.VERIFIED.value if is_valid else IntegrationStatus.ERROR.value
+        integration.updated_at = now
+
+        self.db.commit()
+        self.db.refresh(integration)
+        return is_valid, validation_details
+
+    @staticmethod
+    def _validate_config(integration_type: str, config: dict, has_secret: bool) -> Tuple[bool, dict]:
+        details = {"errors": [], "warnings": [], "validated_fields": []}
+        itype = integration_type.strip().lower()
+
+        if itype == "webhook":
+            url = config.get("url") or config.get("endpoint_url")
+            if not url:
+                details["errors"].append("Missing required field 'url'")
+            elif not isinstance(url, str) or not (url.startswith("http://") or url.startswith("https://")):
+                details["errors"].append("Field 'url' must be a valid HTTP or HTTPS URL")
+            else:
+                details["validated_fields"].append("url")
+                if url.startswith("http://") and "localhost" not in url and "127.0.0.1" not in url:
+                    details["warnings"].append("Insecure HTTP endpoint detected for external webhook")
+            method = config.get("http_method", "POST")
+            if method.upper() not in ["POST", "PUT", "PATCH"]:
+                details["errors"].append(f"Unsupported http_method '{method}'. Allowed: POST, PUT, PATCH")
+            else:
+                details["validated_fields"].append("http_method")
+
+        elif itype == "siem":
+            host = config.get("host") or config.get("server_url")
+            if not host:
+                details["errors"].append("Missing required field 'host' or 'server_url'")
+            else:
+                details["validated_fields"].append("host")
+            port = config.get("port")
+            if port is not None:
+                if not isinstance(port, int) or port < 1 or port > 65535:
+                    details["errors"].append("Field 'port' must be an integer between 1 and 65535")
+                else:
+                    details["validated_fields"].append("port")
+            fmt = config.get("format", "json").lower()
+            if fmt not in ["json", "cef", "syslog", "leef"]:
+                details["errors"].append(f"Unsupported SIEM format '{fmt}'. Allowed: json, cef, syslog, leef")
+            else:
+                details["validated_fields"].append("format")
+
+        elif itype == "security_monitoring":
+            target = config.get("target_system") or config.get("endpoint_url")
+            if not target:
+                details["errors"].append("Missing required field 'target_system' or 'endpoint_url'")
+            else:
+                details["validated_fields"].append("target_system")
+
+        elif itype == "cloud_integration":
+            provider = (config.get("provider") or "").lower()
+            if not provider:
+                details["errors"].append("Missing required field 'provider'")
+            elif provider not in ["aws", "azure", "gcp"]:
+                details["errors"].append(f"Unsupported cloud provider '{provider}'. Allowed: aws, azure, gcp")
+            else:
+                details["validated_fields"].append("provider")
+            if not config.get("region") and not config.get("account_id") and not config.get("project_id"):
+                details["warnings"].append("No specific region or cloud account identifier specified")
+
+        is_valid = len(details["errors"]) == 0
+        return is_valid, details

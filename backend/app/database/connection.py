@@ -52,6 +52,7 @@ def init_db() -> None:
     import backend.app.models.asset
     import backend.app.models.deployment
     import backend.app.models.honeytoken
+    import backend.app.models.integration
     import backend.app.models.event
     import backend.app.models.session
     import backend.app.models.attacker
