@@ -8,6 +8,7 @@ from backend.app.database.connection import get_db
 from backend.app.services.analytics_service import AnalyticsService
 from backend.app.services.asset_service import AssetService
 from backend.app.services.attacker_service import AttackerService
+from backend.app.services.honeytoken_service import HoneytokenService
 from backend.app.services.ingestion_service import IngestionService
 from backend.app.services.session_service import SessionService
 from backend.app.services.tenant_data_access import TenantDataAccess
@@ -58,4 +59,11 @@ def get_attacker_service(db: Session = Depends(get_db)) -> AttackerService:
 
 def get_asset_service(db: Session = Depends(get_db)) -> AssetService:
     return AssetService(db)
+
+
+def get_honeytoken_service(
+    db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_current_tenant),
+) -> HoneytokenService:
+    return HoneytokenService(db, tenant_id=tenant_id)
 

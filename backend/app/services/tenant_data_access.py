@@ -21,8 +21,15 @@ from backend.app.core.exceptions import CrossTenantAccessDeniedException
 from backend.app.models.asset import DeceptiveAsset
 from backend.app.models.attacker import AttackerProfile
 from backend.app.models.event import AttackEvent
+from backend.app.models.honeytoken import Honeytoken
 from backend.app.models.session import AttackerSession
 from backend.app.schemas.asset import AssetCreate, AssetUpdate, AssetStatus, VALID_STATUS_TRANSITIONS
+from backend.app.schemas.honeytoken import (
+    HoneytokenCreate,
+    HoneytokenUpdate,
+    HoneytokenStatus,
+    VALID_HONEYTOKEN_STATUS_TRANSITIONS,
+)
 
 
 class TenantDataAccess:
@@ -305,6 +312,113 @@ class TenantDataAccess:
         else:
             asset.status = AssetStatus.DECOMMISSIONED.value
             asset.updated_at = datetime.now(timezone.utc)
+
+        self.db.commit()
+        return True
+
+    # --------------------------------------------------------------------------
+    # Honeytoken Operations
+    # --------------------------------------------------------------------------
+
+    def get_honeytoken(self, token_id: str) -> Optional[Honeytoken]:
+        """Fetch a honeytoken by ID, validating tenant ownership and dynamically updating expiration."""
+        from backend.app.services.honeytoken_service import HoneytokenService
+        service = HoneytokenService(self.db, self.tenant_id)
+        return service.get_honeytoken(token_id)
+
+    def list_honeytokens(
+        self,
+        page: int = 1,
+        page_size: int = 50,
+        asset_id: Optional[str] = None,
+        token_type: Optional[str] = None,
+        status: Optional[str] = None,
+    ) -> Tuple[List[Honeytoken], int]:
+        """List honeytokens strictly scoped to self.tenant_id."""
+        now = datetime.now(timezone.utc)
+        query = self.db.query(Honeytoken).filter(Honeytoken.tenant_id == self.tenant_id)
+
+        if asset_id:
+            query = query.filter(Honeytoken.asset_id == asset_id.strip())
+        if token_type:
+            query = query.filter(Honeytoken.token_type == token_type.strip().lower())
+        if status:
+            query = query.filter(Honeytoken.status == status.strip().lower())
+
+        query = query.order_by(desc(Honeytoken.created_at))
+        total = query.count()
+        offset = (page - 1) * page_size
+        items = query.offset(offset).limit(page_size).all()
+
+        # Dynamic expiration check on retrieved items
+        for item in items:
+            if item.status == HoneytokenStatus.ACTIVE.value and item.expires_at:
+                exp = item.expires_at if item.expires_at.tzinfo else item.expires_at.replace(tzinfo=timezone.utc)
+                if exp <= now:
+                    item.status = HoneytokenStatus.EXPIRED.value
+                    item.updated_at = now
+        self.db.commit()
+
+        return items, total
+
+    def create_honeytoken(self, payload: HoneytokenCreate) -> Tuple[Honeytoken, Optional[dict]]:
+        """Register a honeytoken with strict tenant isolation and asset verification."""
+        from backend.app.services.honeytoken_service import HoneytokenService
+        service = HoneytokenService(self.db, self.tenant_id)
+        return service.register_honeytoken(payload)
+
+    def update_honeytoken(self, token_id: str, payload: HoneytokenUpdate) -> Optional[Honeytoken]:
+        """Update a honeytoken with tenant ownership validation and allowed status transition checks."""
+        token = self.get_honeytoken(token_id)
+        if not token:
+            return None
+
+        if payload.status is not None:
+            new_status_str = payload.status.strip().lower()
+            try:
+                current_status = HoneytokenStatus(token.status)
+                new_status = HoneytokenStatus(new_status_str)
+                allowed_transitions = VALID_HONEYTOKEN_STATUS_TRANSITIONS.get(current_status, set())
+                if new_status != current_status and new_status not in allowed_transitions:
+                    raise ValueError(
+                        f"Invalid status transition from '{token.status}' to '{new_status_str}'. "
+                        f"Allowed transitions: {[s.value for s in allowed_transitions]}"
+                    )
+            except ValueError as ve:
+                if "Invalid status transition" in str(ve):
+                    raise
+                pass
+            token.status = new_status_str
+
+        if payload.name is not None:
+            token.name = payload.name.strip()
+        if payload.description is not None:
+            token.description = payload.description.strip() if payload.description else None
+        if payload.metadata is not None:
+            token.token_metadata = payload.metadata
+        if payload.expires_at is not None:
+            token.expires_at = payload.expires_at
+
+        token.updated_at = datetime.now(timezone.utc)
+        self.db.commit()
+        self.db.refresh(token)
+        return token
+
+    def delete_honeytoken(self, token_id: str, hard_delete: bool = False) -> bool:
+        """Revoke or permanently delete a honeytoken with tenant ownership verification."""
+        token = self.get_honeytoken(token_id)
+        if not token:
+            return False
+
+        if hard_delete:
+            self.db.delete(token)
+        else:
+            now = datetime.now(timezone.utc)
+            token.status = HoneytokenStatus.REVOKED.value
+            meta = dict(token.token_metadata or {})
+            meta["revoked_at"] = now.isoformat()
+            token.token_metadata = meta
+            token.updated_at = now
 
         self.db.commit()
         return True

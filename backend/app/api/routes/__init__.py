@@ -1,4 +1,4 @@
-from backend.app.api.routes import health, ingestion, events, attackers, sessions, dashboard, websocket, tenants, assets
+from backend.app.api.routes import health, ingestion, events, attackers, sessions, dashboard, websocket, tenants, assets, honeytokens
 
-__all__ = ["health", "ingestion", "events", "attackers", "sessions", "dashboard", "websocket", "tenants", "assets"]
+__all__ = ["health", "ingestion", "events", "attackers", "sessions", "dashboard", "websocket", "tenants", "assets", "honeytokens"]
 

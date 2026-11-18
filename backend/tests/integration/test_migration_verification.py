@@ -101,15 +101,26 @@ def test_alembic_multi_tenant_migration_clean_backfill():
             assert "db-001" in asset_map
             assert "canary-token-aws-01" in asset_map
 
+            # Verify honeytokens table and seeded honeytokens from 0004 migration
+            token_rows = conn.execute(text("SELECT token_id, tenant_id, asset_id, status FROM honeytokens ORDER BY token_id")).fetchall()
+            assert len(token_rows) >= 2
+            token_map = {row[0]: (row[1], row[2], row[3]) for row in token_rows}
+            assert "htk-aws-prod-001" in token_map
+            assert token_map["htk-aws-prod-001"] == ("tenant-apex-001", "canary-token-aws-01", "active")
+            assert "htk-ssh-backup-001" in token_map
+            assert token_map["htk-ssh-backup-001"] == ("tenant-apex-001", "ssh-001", "active")
+
         # 4. Downgrade back to 0001_initial_schema to verify clean reversal
         command.downgrade(alembic_cfg, "0001_initial_schema")
 
-        # Verify tenants and deceptive_assets tables dropped
+        # Verify tenants, deceptive_assets, and honeytokens tables dropped
         with engine.connect() as conn:
             tenants_count = conn.execute(text("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='tenants'")).scalar()
             assert tenants_count == 0
             assets_count = conn.execute(text("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='deceptive_assets'")).scalar()
             assert assets_count == 0
+            tokens_count = conn.execute(text("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='honeytokens'")).scalar()
+            assert tokens_count == 0
 
     finally:
         shutil.rmtree(temp_dir, ignore_errors=True)

@@ -128,6 +128,12 @@ class Person1SecurityEventAdapter(BaseTelemetryAdapter):
         metadata = clean_raw.get("metadata", {}) or {}
         clean_metadata = sanitize_credentials(metadata)
 
+        # Preserve honeytoken identification in metadata
+        if "honeytoken_id" in clean_raw and "honeytoken_id" not in clean_metadata:
+            clean_metadata["honeytoken_id"] = clean_raw["honeytoken_id"]
+        if "trigger_type" in clean_raw and "trigger_type" not in clean_metadata:
+            clean_metadata["trigger_type"] = clean_raw["trigger_type"]
+
         # Event ID
         event_id = clean_raw.get("event_id") or str(uuid.uuid4())
 

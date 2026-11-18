@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from backend.app.core.logging import logger
 from backend.app.integrations.person1_adapter import Person1SecurityEventAdapter
 from backend.app.models.event import AttackEvent
+from backend.app.models.honeytoken import Honeytoken
 from backend.app.models.mitre import MitreMapping
 from backend.app.schemas.event import IngestionResponse, AttackEventCreate
 from backend.app.services.asset_service import AssetService
@@ -70,6 +71,20 @@ class IngestionService:
                     tenant_id=event_create.tenant_id,
                     source_service=event_create.source_service,
                 )
+
+                # 4b. If event references a honeytoken, update its trigger tracking
+                honeytoken_id = event_create.metadata.get("honeytoken_id")
+                if honeytoken_id:
+                    token = self.db.query(Honeytoken).filter(
+                        Honeytoken.token_id == str(honeytoken_id).strip(),
+                        Honeytoken.tenant_id == event_create.tenant_id,
+                    ).first()
+                    if token:
+                        token.trigger_count += 1
+                        token.last_triggered_at = event_create.timestamp
+                        if token.status == "active":
+                            token.status = "triggered"
+                        token.updated_at = event_create.timestamp
 
                 # 5. Correlate or create Attacker Session
                 session = self.session_service.get_or_create_session(
