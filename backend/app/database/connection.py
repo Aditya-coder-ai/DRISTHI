@@ -48,6 +48,8 @@ def init_db() -> None:
     """Create all database tables if they do not exist."""
     logger.info("Initializing database schema on %s...", settings.DATABASE_URL.split("@")[-1])
     # Import all models so Base has registered them
+    import backend.app.models.tenant
+    import backend.app.models.asset
     import backend.app.models.event
     import backend.app.models.session
     import backend.app.models.attacker

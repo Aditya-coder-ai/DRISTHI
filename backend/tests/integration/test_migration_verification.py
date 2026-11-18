@@ -90,13 +90,26 @@ def test_alembic_multi_tenant_migration_clean_backfill():
             assert atk_row is not None
             assert atk_row[1] == "tenant-apex-001"
 
+            # Verify deceptive_assets table and seeded default honeypots
+            asset_rows = conn.execute(text("SELECT asset_id, tenant_id, status FROM deceptive_assets ORDER BY asset_id")).fetchall()
+            assert len(asset_rows) >= 5
+            asset_map = {row[0]: (row[1], row[2]) for row in asset_rows}
+            assert "ssh-001" in asset_map
+            assert asset_map["ssh-001"] == ("tenant-apex-001", "active")
+            assert "ftp-001" in asset_map
+            assert "web-001" in asset_map
+            assert "db-001" in asset_map
+            assert "canary-token-aws-01" in asset_map
+
         # 4. Downgrade back to 0001_initial_schema to verify clean reversal
         command.downgrade(alembic_cfg, "0001_initial_schema")
 
-        # Verify tenants table dropped and tenant_id column removed
+        # Verify tenants and deceptive_assets tables dropped
         with engine.connect() as conn:
-            result = conn.execute(text("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='tenants'")).scalar()
-            assert result == 0
+            tenants_count = conn.execute(text("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='tenants'")).scalar()
+            assert tenants_count == 0
+            assets_count = conn.execute(text("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='deceptive_assets'")).scalar()
+            assert assets_count == 0
 
     finally:
         shutil.rmtree(temp_dir, ignore_errors=True)

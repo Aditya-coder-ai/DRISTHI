@@ -7,6 +7,7 @@ from backend.app.integrations.person1_adapter import Person1SecurityEventAdapter
 from backend.app.models.event import AttackEvent
 from backend.app.models.mitre import MitreMapping
 from backend.app.schemas.event import IngestionResponse, AttackEventCreate
+from backend.app.services.asset_service import AssetService
 from backend.app.services.attacker_service import AttackerService
 from backend.app.services.mitre_service import MitreService
 from backend.app.services.session_service import SessionService
@@ -19,6 +20,7 @@ class IngestionService:
     def __init__(self, db: Session):
         self.db = db
         self.adapter = Person1SecurityEventAdapter()
+        self.asset_service = AssetService(db)
         self.session_service = SessionService(db)
         self.attacker_service = AttackerService(db)
 
@@ -62,13 +64,20 @@ class IngestionService:
                 # 3. Update or create Attacker Profile
                 attacker_profile = self.attacker_service.update_attacker_profile(event_create)
 
-                # 4. Correlate or create Attacker Session
+                # 4. Ensure deceptive asset is registered
+                self.asset_service.ensure_asset_registered(
+                    asset_id=event_create.asset_id,
+                    tenant_id=event_create.tenant_id,
+                    source_service=event_create.source_service,
+                )
+
+                # 5. Correlate or create Attacker Session
                 session = self.session_service.get_or_create_session(
                     event_create, attacker_id=attacker_profile.attacker_id
                 )
                 event_create.session_id = session.session_id
 
-                # 5. Persist Attack Event
+                # 6. Persist Attack Event
                 event_model = AttackEvent(
                     event_id=event_create.event_id,
                     tenant_id=event_create.tenant_id,

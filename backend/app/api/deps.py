@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from backend.app.core.config import settings
 from backend.app.database.connection import get_db
 from backend.app.services.analytics_service import AnalyticsService
+from backend.app.services.asset_service import AssetService
 from backend.app.services.attacker_service import AttackerService
 from backend.app.services.ingestion_service import IngestionService
 from backend.app.services.session_service import SessionService
@@ -53,4 +54,8 @@ def get_session_service(db: Session = Depends(get_db)) -> SessionService:
 
 def get_attacker_service(db: Session = Depends(get_db)) -> AttackerService:
     return AttackerService(db)
+
+
+def get_asset_service(db: Session = Depends(get_db)) -> AssetService:
+    return AssetService(db)
 

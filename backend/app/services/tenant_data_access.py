@@ -11,16 +11,18 @@ Guarantees:
 - No data leak across tenant boundaries.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from math import ceil
 from typing import List, Optional, Tuple
 from sqlalchemy import desc, asc
 from sqlalchemy.orm import Session
 
 from backend.app.core.exceptions import CrossTenantAccessDeniedException
+from backend.app.models.asset import DeceptiveAsset
 from backend.app.models.attacker import AttackerProfile
 from backend.app.models.event import AttackEvent
 from backend.app.models.session import AttackerSession
+from backend.app.schemas.asset import AssetCreate, AssetUpdate, AssetStatus, VALID_STATUS_TRANSITIONS
 
 
 class TenantDataAccess:
@@ -166,3 +168,143 @@ class TenantDataAccess:
         offset = (page - 1) * page_size
         items = query.offset(offset).limit(page_size).all()
         return items, total
+
+    # --------------------------------------------------------------------------
+    # Deceptive Asset Operations
+    # --------------------------------------------------------------------------
+
+    def get_asset(self, asset_id: str) -> Optional[DeceptiveAsset]:
+        """Fetch a deceptive asset by ID, rejecting cross-tenant attempts."""
+        clean_id = asset_id.strip()
+        asset = self.db.query(DeceptiveAsset).filter(DeceptiveAsset.asset_id == clean_id).first()
+        if not asset:
+            return None
+        if asset.tenant_id != self.tenant_id:
+            raise CrossTenantAccessDeniedException(
+                f"Access denied: asset '{clean_id}' belongs to tenant '{asset.tenant_id}', not '{self.tenant_id}'"
+            )
+        return asset
+
+    def list_assets(
+        self,
+        page: int = 1,
+        page_size: int = 20,
+        asset_type: Optional[str] = None,
+        status_filter: Optional[str] = None,
+        environment: Optional[str] = None,
+        search: Optional[str] = None,
+    ) -> Tuple[List[DeceptiveAsset], int]:
+        """Query deceptive assets strictly constrained to self.tenant_id."""
+        query = self.db.query(DeceptiveAsset).filter(DeceptiveAsset.tenant_id == self.tenant_id)
+
+        if asset_type:
+            query = query.filter(DeceptiveAsset.asset_type == asset_type.strip().lower())
+        if status_filter:
+            query = query.filter(DeceptiveAsset.status == status_filter.strip().lower())
+        if environment:
+            query = query.filter(DeceptiveAsset.environment == environment.strip().lower())
+        if search:
+            term = f"%{search.strip()}%"
+            query = query.filter(
+                (DeceptiveAsset.name.ilike(term)) | (DeceptiveAsset.asset_id.ilike(term))
+            )
+
+        query = query.order_by(desc(DeceptiveAsset.created_at))
+        total = query.count()
+        offset = (page - 1) * page_size
+        items = query.offset(offset).limit(page_size).all()
+        return items, total
+
+    def create_asset(self, payload: AssetCreate) -> DeceptiveAsset:
+        """Register a new deceptive asset under self.tenant_id, rejecting cross-tenant targets."""
+        # 1. Enforce that payload cannot target a foreign tenant
+        if payload.tenant_id and payload.tenant_id.strip() != self.tenant_id:
+            raise CrossTenantAccessDeniedException(
+                f"Unauthorized: cannot register asset under tenant '{payload.tenant_id}' using authenticated tenant context '{self.tenant_id}'"
+            )
+
+        clean_id = payload.asset_id.strip()
+
+        # 2. Prevent duplicate asset_id globally or within tenant
+        existing = self.db.query(DeceptiveAsset).filter(DeceptiveAsset.asset_id == clean_id).first()
+        if existing:
+            if existing.tenant_id != self.tenant_id:
+                raise CrossTenantAccessDeniedException(
+                    f"Asset ID '{clean_id}' is already registered under another tenant"
+                )
+            raise ValueError(f"Asset with ID '{clean_id}' already exists in tenant '{self.tenant_id}'")
+
+        now = datetime.now(timezone.utc)
+        asset = DeceptiveAsset(
+            asset_id=clean_id,
+            tenant_id=self.tenant_id,
+            name=payload.name.strip(),
+            asset_type=payload.asset_type.strip().lower(),
+            description=payload.description.strip() if payload.description else None,
+            deployment_id=payload.deployment_id.strip() if payload.deployment_id else None,
+            environment=payload.environment.strip().lower() if payload.environment else "production",
+            status=payload.status.strip().lower() if payload.status else AssetStatus.ACTIVE.value,
+            config_metadata=payload.config_metadata or {},
+            created_at=now,
+            updated_at=now,
+        )
+        self.db.add(asset)
+        self.db.commit()
+        self.db.refresh(asset)
+        return asset
+
+    def update_asset(self, asset_id: str, payload: AssetUpdate) -> Optional[DeceptiveAsset]:
+        """Update an existing asset with validation of tenant ownership and status transitions."""
+        asset = self.get_asset(asset_id)
+        if not asset:
+            return None
+
+        # Validate status transitions if status is being updated
+        if payload.status is not None:
+            new_status_str = payload.status.strip().lower()
+            try:
+                current_status = AssetStatus(asset.status)
+                new_status = AssetStatus(new_status_str)
+                allowed_transitions = VALID_STATUS_TRANSITIONS.get(current_status, set())
+                if new_status != current_status and new_status not in allowed_transitions:
+                    raise ValueError(
+                        f"Invalid status transition from '{asset.status}' to '{new_status_str}'. "
+                        f"Allowed transitions: {[s.value for s in allowed_transitions]}"
+                    )
+            except ValueError as ve:
+                if "Invalid status transition" in str(ve):
+                    raise
+                # Fallback if unknown custom status
+                pass
+            asset.status = new_status_str
+
+        if payload.name is not None:
+            asset.name = payload.name.strip()
+        if payload.description is not None:
+            asset.description = payload.description.strip() if payload.description else None
+        if payload.deployment_id is not None:
+            asset.deployment_id = payload.deployment_id.strip() if payload.deployment_id else None
+        if payload.environment is not None:
+            asset.environment = payload.environment.strip().lower()
+        if payload.config_metadata is not None:
+            asset.config_metadata = payload.config_metadata
+
+        asset.updated_at = datetime.now(timezone.utc)
+        self.db.commit()
+        self.db.refresh(asset)
+        return asset
+
+    def delete_asset(self, asset_id: str, hard_delete: bool = False) -> bool:
+        """Decommission or permanently remove an asset with tenant ownership enforcement."""
+        asset = self.get_asset(asset_id)
+        if not asset:
+            return False
+
+        if hard_delete:
+            self.db.delete(asset)
+        else:
+            asset.status = AssetStatus.DECOMMISSIONED.value
+            asset.updated_at = datetime.now(timezone.utc)
+
+        self.db.commit()
+        return True
