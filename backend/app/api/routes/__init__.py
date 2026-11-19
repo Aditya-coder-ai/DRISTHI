@@ -11,6 +11,7 @@ from backend.app.api.routes import (
     honeytokens,
     deployments,
     integrations,
+    webhooks,
 )
 
 __all__ = [
@@ -26,5 +27,6 @@ __all__ = [
     "honeytokens",
     "deployments",
     "integrations",
+    "webhooks",
 ]
 

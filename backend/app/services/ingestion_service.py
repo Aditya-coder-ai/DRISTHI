@@ -12,6 +12,7 @@ from backend.app.services.asset_service import AssetService
 from backend.app.services.attacker_service import AttackerService
 from backend.app.services.mitre_service import MitreService
 from backend.app.services.session_service import SessionService
+from backend.app.services.webhook_service import WebhookDeliveryService
 from backend.app.websocket.manager import ws_manager
 
 
@@ -44,6 +45,7 @@ class IngestionService:
         persisted = 0
         duplicates_skipped = 0
         errors = []
+        persisted_events = []
 
         for raw_item in raw_events:
             processed += 1
@@ -126,6 +128,12 @@ class IngestionService:
                     self.db.add(mitre_model)
 
                 persisted += 1
+                persisted_events.append({
+                    "event_id": event_create.event_id,
+                    "tenant_id": event_create.tenant_id,
+                    "event_type": event_create.event_type,
+                    "severity": event_create.severity,
+                })
 
                 # 7. Broadcast real-time update
                 ws_manager.broadcast_sync({
@@ -161,6 +169,13 @@ class IngestionService:
                 duplicates_skipped=duplicates_skipped,
                 errors=[f"Database transaction commit failed: {str(exc)}"],
             )
+
+        # 8. Trigger non-blocking asynchronous webhook notifications for persisted events
+        for p_evt in persisted_events:
+            try:
+                WebhookDeliveryService.dispatch_async(p_evt)
+            except Exception as w_exc:
+                logger.error("Webhook dispatch failed safely: %s", w_exc)
 
         logger.info(
             "Batch ingestion finished: processed=%d, persisted=%d, duplicates_skipped=%d, errors=%d",

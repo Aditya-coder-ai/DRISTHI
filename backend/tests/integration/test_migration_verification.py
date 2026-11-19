@@ -125,10 +125,14 @@ def test_alembic_multi_tenant_migration_clean_backfill():
             intg_count = conn.execute(text("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='integration_configs'")).scalar()
             assert intg_count == 1
 
+            # Verify webhook_deliveries table from 0007 migration
+            webhook_count = conn.execute(text("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='webhook_deliveries'")).scalar()
+            assert webhook_count == 1
+
         # 4. Downgrade back to 0001_initial_schema to verify clean reversal
         command.downgrade(alembic_cfg, "0001_initial_schema")
 
-        # Verify tenants, deceptive_assets, honeytokens, deployments, and integration_configs tables dropped
+        # Verify tenants, deceptive_assets, honeytokens, deployments, integration_configs, and webhook_deliveries tables dropped
         with engine.connect() as conn:
             tenants_count = conn.execute(text("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='tenants'")).scalar()
             assert tenants_count == 0
@@ -140,6 +144,8 @@ def test_alembic_multi_tenant_migration_clean_backfill():
             assert deployments_count == 0
             intg_dropped_count = conn.execute(text("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='integration_configs'")).scalar()
             assert intg_dropped_count == 0
+            webhook_dropped_count = conn.execute(text("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='webhook_deliveries'")).scalar()
+            assert webhook_dropped_count == 0
 
     finally:
         shutil.rmtree(temp_dir, ignore_errors=True)

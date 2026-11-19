@@ -25,6 +25,7 @@ from backend.app.models.deployment import Deployment
 from backend.app.models.event import AttackEvent
 from backend.app.models.honeytoken import Honeytoken
 from backend.app.models.integration import IntegrationConfig
+from backend.app.models.webhook_delivery import WebhookDelivery
 from backend.app.models.session import AttackerSession
 from backend.app.schemas.asset import AssetCreate, AssetUpdate, AssetStatus, VALID_STATUS_TRANSITIONS
 from backend.app.schemas.deployment import (
@@ -872,3 +873,81 @@ class TenantDataAccess:
 
         is_valid = len(details["errors"]) == 0
         return is_valid, details
+
+    # --------------------------------------------------------------------------
+    # Webhook Delivery Operations
+    # --------------------------------------------------------------------------
+
+    def get_webhook_delivery(self, delivery_id: str) -> Optional[WebhookDelivery]:
+        """Fetch a webhook delivery record by ID, rejecting cross-tenant attempts."""
+        clean_id = delivery_id.strip()
+        delivery = self.db.query(WebhookDelivery).filter(
+            WebhookDelivery.delivery_id == clean_id
+        ).first()
+        if not delivery:
+            return None
+        if delivery.tenant_id != self.tenant_id:
+            raise CrossTenantAccessDeniedException(
+                f"Access denied: webhook delivery '{clean_id}' belongs to tenant '{delivery.tenant_id}', not '{self.tenant_id}'"
+            )
+        return delivery
+
+    def list_webhook_deliveries(
+        self,
+        page: int = 1,
+        page_size: int = 20,
+        status: Optional[str] = None,
+        integration_id: Optional[str] = None,
+        event_id: Optional[str] = None,
+        event_type: Optional[str] = None,
+    ) -> Tuple[List[WebhookDelivery], int]:
+        """Query webhook delivery records strictly constrained to self.tenant_id."""
+        query = self.db.query(WebhookDelivery).filter(WebhookDelivery.tenant_id == self.tenant_id)
+
+        if status:
+            query = query.filter(WebhookDelivery.status == status.strip().lower())
+        if integration_id:
+            query = query.filter(WebhookDelivery.integration_id == integration_id.strip())
+        if event_id:
+            query = query.filter(WebhookDelivery.event_id == event_id.strip())
+        if event_type:
+            query = query.filter(WebhookDelivery.event_type == event_type.strip().lower())
+
+        query = query.order_by(desc(WebhookDelivery.created_at))
+        total = query.count()
+        offset = (page - 1) * page_size
+        items = query.offset(offset).limit(page_size).all()
+        return items, total
+
+    def retry_webhook_delivery(self, delivery_id: str) -> Optional[WebhookDelivery]:
+        """Retries a webhook delivery attempt with tenant verification."""
+        from backend.app.services.webhook_service import WebhookDeliveryService
+
+        delivery = self.get_webhook_delivery(delivery_id)
+        if not delivery:
+            return None
+
+        service = WebhookDeliveryService(self.db)
+        return service.retry_delivery(delivery_id, self.tenant_id)
+
+    def get_webhook_delivery_summary(self) -> dict:
+        """Returns delivery counts and success rate for self.tenant_id."""
+        from backend.app.schemas.webhook import WebhookDeliveryStatus
+
+        query = self.db.query(WebhookDelivery).filter(WebhookDelivery.tenant_id == self.tenant_id)
+        total = query.count()
+        delivered = query.filter(WebhookDelivery.status == WebhookDeliveryStatus.DELIVERED.value).count()
+        failed = query.filter(WebhookDelivery.status == WebhookDeliveryStatus.FAILED.value).count()
+        pending = query.filter(WebhookDelivery.status == WebhookDeliveryStatus.PENDING.value).count()
+        retrying = query.filter(WebhookDelivery.status == WebhookDeliveryStatus.RETRYING.value).count()
+
+        success_rate = round((delivered / total * 100.0), 2) if total > 0 else 100.0
+
+        return {
+            "total": total,
+            "delivered": delivered,
+            "failed": failed,
+            "pending": pending,
+            "retrying": retrying,
+            "success_rate": success_rate,
+        }
