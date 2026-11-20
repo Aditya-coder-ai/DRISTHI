@@ -1,0 +1,26 @@
+title = "DRISTHI Gitleaks Configuration"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Allowlist intentional AWS documentation example key used in DRISTHI honeytoken fixtures"
+paths = [
+  '''^\.gitleaks\.toml$''',
+  '''^shared/asset_registry\.py$''',
+  '''^tests/test_asset_registry\.py$''',
+  '''^tests/test_honeytoken_triggers\.py$''',
+]
+regexes = [
+  '''AKIAIOSFODNN7EXAMPLE''',
+]
+
+[[allowlists]]
+description = "Allowlist truncated synthetic PEM header redaction test in backend asset API test"
+paths = [
+  '''^\.gitleaks\.toml$''',
+  '''^backend/tests/api/test_assets_api\.py$''',
+]
+regexes = [
+  '''-----BEGIN RSA PRIVATE KEY-----\.\.\.''',
+]

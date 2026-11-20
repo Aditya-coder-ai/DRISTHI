@@ -35,3 +35,18 @@ class CrossTenantAccessDeniedException(DrishtiException):
     """Raised when an operation attempts to access or manipulate data across tenant boundaries."""
     pass
 
+
+class WebhookConfigurationError(DrishtiException):
+    """Raised when required webhook signing secret configuration is missing or invalid."""
+    pass
+
+
+class WebhookSignatureVerificationError(DrishtiException):
+    """Raised when an incoming webhook signature fails cryptographic or replay verification."""
+    pass
+
+
+class WebhookPayloadError(DrishtiException):
+    """Raised when an incoming webhook payload is malformed or invalid JSON."""
+    pass
+

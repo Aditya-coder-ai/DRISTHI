@@ -6,15 +6,16 @@ from fastapi.testclient import TestClient
 
 def test_create_webhook_integration_with_secret(client: TestClient):
     """Test creating a webhook integration, verifying secret masking and safe validation."""
+    test_secret = "hooksec_fake_test_only_token_0001"
     response = client.post("/api/integrations", json={
         "integration_id": "intg-webhook-slack-01",
         "name": "SecOps Slack Incident Channel",
         "integration_type": "webhook",
         "config_metadata": {
-            "url": "https://hooks.slack.com/services/T00/B00/X00",
+            "url": "https://webhooks.example.test/secops-alerts",
             "http_method": "POST",
         },
-        "secret": "whsec_supersecrettoken1234567890",
+        "secret": test_secret,
         "enabled": True,
     })
     assert response.status_code == 201
@@ -25,9 +26,9 @@ def test_create_webhook_integration_with_secret(client: TestClient):
     assert data["enabled"] is True
     assert data["status"] == "verified"  # Auto-validated on creation
     assert data["has_secret"] is True
-    assert "whsec_supersecrettoken1234567890" not in str(data)  # Plaintext never exposed
+    assert test_secret not in str(data)  # Plaintext never exposed
     assert data["secret_masked"] is not None
-    assert "whsec_" in data["secret_masked"]
+    assert "hooksec_" in data["secret_masked"]
     assert "****" in data["secret_masked"]
 
 
@@ -95,7 +96,7 @@ def test_list_integrations_with_filters(client: TestClient):
         "integration_id": "intg-list-webhook",
         "name": "Discord Webhook",
         "integration_type": "webhook",
-        "config_metadata": {"url": "https://discord.com/api/webhooks/123"},
+        "config_metadata": {"url": "https://webhooks.example.test/discord-alerts"},
         "enabled": True,
     })
     client.post("/api/integrations", json={
@@ -135,7 +136,7 @@ def test_get_and_update_integration(client: TestClient):
         "name": "Original Name",
         "integration_type": "webhook",
         "config_metadata": {"url": "https://example.com/v1"},
-        "secret": "initial_secret_12345",
+        "secret": "test-dummy-secret",
     })
 
     # 1. Retrieve

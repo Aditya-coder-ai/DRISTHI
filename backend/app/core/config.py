@@ -73,10 +73,12 @@ class BackendSettings(BaseSettings):
     SESSION_IDLE_TIMEOUT_SECONDS: int = 1800  # 30 mins idle -> session closed
     MAX_BATCH_INGESTION_SIZE: int = 200
 
-    # Webhook Delivery Settings
+    # Webhook Delivery & Verification Settings
     WEBHOOK_TIMEOUT_SECONDS: int = int(os.getenv("WEBHOOK_TIMEOUT_SECONDS", "5"))
     WEBHOOK_MAX_RETRIES: int = int(os.getenv("WEBHOOK_MAX_RETRIES", "3"))
     WEBHOOK_ALLOW_INTERNAL_URLS: bool = os.getenv("WEBHOOK_ALLOW_INTERNAL_URLS", "false").lower() in ("true", "1", "yes")
+    STRIPE_WEBHOOK_SECRET: Optional[str] = None
+    STRIPE_WEBHOOK_TOLERANCE_SECONDS: int = int(os.getenv("STRIPE_WEBHOOK_TOLERANCE_SECONDS", "300"))
 
 
 

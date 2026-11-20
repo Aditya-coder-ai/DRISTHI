@@ -1,0 +1,7 @@
+employee_id,name,department,quarterly_salary,bonus,tax_withheld,net_disbursement
+EMP-1001,Jonathan Miller,Executive Management,62500.00,15000.00,21700.00,55800.00
+EMP-1002,Sarah Jenkins,Corporate Finance,38000.00,7500.00,12740.00,32760.00
+EMP-1003,David Ross,Information Security,41000.00,8000.00,13720.00,35280.00
+EMP-1004,Elena Vance,Database Operations,36500.00,6000.00,11900.00,30600.00
+EMP-1005,Michael Chen,Cloud Infrastructure,39000.00,7000.00,12880.00,33120.00
+

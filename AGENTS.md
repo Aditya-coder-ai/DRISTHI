@@ -20,8 +20,11 @@
    - Parameterized queries via SQLAlchemy ORM (zero SQL injection).
    - Strict UTC ISO 8601 timestamps.
 4. **Resilience & Production Standards**:
-   - Zero hardcoded credentials.
-   - Configurable environment via `pydantic-settings`.
+   - Zero hardcoded credentials, API tokens, or provider-prefixed secret literals (such as `whsec_`, `sk_live_`, `ghp_`, or real PEM keys) anywhere in source code, docstrings, or test fixtures.
+   - Load all signing secrets (including `STRIPE_WEBHOOK_SECRET` and `BACKEND_API_KEY`) strictly from environment variables via `pydantic-settings`; fail closed if required production secrets are missing or set to template placeholders.
+   - Use clearly synthetic, non-provider-prefixed test secrets isolated via `monkeypatch` in automated tests; never log secrets or include secret values in exceptions or API responses.
+   - Keep `.env`, `.env.*`, local databases, private keys, and runtime logs excluded via `.gitignore`; preserve safe `.env.example` templates with non-usable placeholder values.
+   - Maintain passing GitHub Actions CI (`.github/workflows/ci.yml`) and security scanning (`.github/workflows/security.yml`) checks on all pull requests.
    - Structured JSON logging.
    - Graceful WebSocket client disconnects without impacting REST API.
 
