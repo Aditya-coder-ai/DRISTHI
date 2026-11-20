@@ -22,7 +22,7 @@ class IntegrationStatus(str, Enum):
 
 
 def mask_secret(secret_val: str) -> str:
-    """Mask sensitive secret strings (e.g., 'whsec_1234567890abcdef' -> 'whsec_****_cdef')."""
+    """Mask sensitive secret strings (e.g., 'hooksec_sample_example_cdef' -> 'hooksec_****_cdef')."""
     clean = secret_val.strip()
     if len(clean) <= 8:
         return "********"

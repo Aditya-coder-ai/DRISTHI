@@ -1,6 +1,7 @@
 # Virtual environment
 .venv/
 venv/
+env/
 ENV/
 
 # Python cache
@@ -9,8 +10,15 @@ __pycache__/
 *$py.class
 *.so
 .pytest_cache/
+.mypy_cache/
+.ruff_cache/
 .coverage
 htmlcov/
+
+# Frontend / build artifacts
+node_modules/
+dist/
+build/
 
 # Honeypot runtime uploads & quarantine
 services/ftp/uploads/*
@@ -21,27 +29,41 @@ services/ssh/log/
 services/ssh/download/
 services/ssh/tty/
 *.log
+logs/
 *.pid
 
 # Environment variables and secrets
 .env
+.env.*
 !.env.example
+!.env.template
+*.pem
+*.key
+*.p12
+*.pfx
 
 # Database files
 *.sqlite
 *.sqlite3
 *.db
 
+# IDE / editor metadata
+.idea/
+.vscode/
+
 # OS files
 .DS_Store
 Thumbs.db
 
 # Documentation and reports
+GITHUB_AUTOMATION_AUDIT.md
 GITHUB_PR_RECOVERY_REPORT.md
+GITIGNORE_AUDIT_REPORT.md
 GITIGNORE_UPDATE_REPORT.md
 IMPLEMENTATION_PLAN.md
 PERSON2_BACKEND_READINESS_REPORT.md
 PERSON2_PHASE_COMPLETION_REPORT.md
 PERSON3_FRONTEND_INTEGRATION_GUIDE.md
+SECURITY_REMEDIATION_REPORT.md
 author-callback.py
 
