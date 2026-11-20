@@ -1,6 +1,6 @@
 """Central Event Ingestion Pipeline Service."""
 
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Optional, Union
 from sqlalchemy.orm import Session
 from backend.app.core.logging import logger
 from backend.app.integrations.person1_adapter import Person1SecurityEventAdapter

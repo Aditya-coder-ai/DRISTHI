@@ -14,7 +14,8 @@ services:
       - ./var/log:/app/var/log
     environment:
       - DATABASE_URL=${DATABASE_URL:-sqlite:///var/data/drishti_central.db}
-      - BACKEND_API_KEY=${BACKEND_API_KEY:-drishti-sec-token-2026}
+      - BACKEND_API_KEY=${BACKEND_API_KEY:-}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET:-}
       - FRONTEND_ORIGINS=${FRONTEND_ORIGINS:-http://localhost:5173,http://localhost:3000}
     restart: unless-stopped
 
@@ -93,7 +94,7 @@ services:
     environment:
       - DECEPTION_ENV=production
       - BACKEND_API_URL=${BACKEND_API_URL:-http://central-backend:8000/api/events}
-      - BACKEND_API_KEY=${BACKEND_API_KEY:-drishti-sec-token-2026}
+      - BACKEND_API_KEY=${BACKEND_API_KEY:-}
       - EVENT_BATCH_SIZE=50
       - RETRY_LIMIT=5
     depends_on:
