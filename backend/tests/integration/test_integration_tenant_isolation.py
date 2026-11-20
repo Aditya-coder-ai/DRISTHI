@@ -137,7 +137,7 @@ def test_tenant_data_access_layer_direct_isolation(test_db: Session):
         name="Direct Tenant A Hook",
         integration_type="webhook",
         config_metadata={"url": "https://hook.internal"},
-        secret="direct_secret_12345",
+        secret="test-dummy-secret",
     ))
     assert intg_a.integration_id == "direct-intg-a"
 

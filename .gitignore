@@ -23,7 +23,7 @@ build/
 # Honeypot runtime uploads & quarantine
 services/ftp/uploads/*
 !services/ftp/uploads/.gitkeep
-var/
+/var/
 services/ssh/var/
 services/ssh/log/
 services/ssh/download/

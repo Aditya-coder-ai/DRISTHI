@@ -136,7 +136,7 @@ def test_get_and_update_integration(client: TestClient):
         "name": "Original Name",
         "integration_type": "webhook",
         "config_metadata": {"url": "https://example.com/v1"},
-        "secret": "initial_secret_12345",
+        "secret": "test-dummy-secret",
     })
 
     # 1. Retrieve
